@@ -11,7 +11,8 @@ SUPABASE_KEY = "sb_publishable_HNgog4XZVoR6FqaKuzIcGQ_7yrDAjFn"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-in-production'
+# Get secret key from environment variable or use default (change in production!)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here-change-in-production')
 
 @app.route('/')
 def index():
@@ -280,5 +281,8 @@ def report():
     return render_template('report.html')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Get port from environment variable (Render provides this) or default to 5000
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(debug=debug, host='0.0.0.0', port=port)
 

@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: pechay-detection-system
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: FLASK_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: ROBOFLOW_API_KEY
+        sync: false
+      - key: ROBOFLOW_WORKSPACE
+        value: bael
+      - key: ROBOFLOW_WORKFLOW
+        value: custom-workflow-3
+      - key: ROBOFLOW_API_URL
+        value: https://api.roboflow.com
+
