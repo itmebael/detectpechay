@@ -1,18 +1,40 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify
 import os
+import sys
 from supabase import create_client, Client
 from datetime import datetime
+from werkzeug.utils import secure_filename
 
-# Supabase configuration
 SUPABASE_URL = "https://zqkqmjlepigpwfykwzey.supabase.co"
 SUPABASE_KEY = "sb_publishable_HNgog4XZVoR6FqaKuzIcGQ_7yrDAjFn"
 
-# Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app = Flask(__name__)
-# Get secret key from environment variable or use default (change in production!)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here-change-in-production')
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TRYCNN_REPO_PATH = os.path.join(BASE_DIR, "trycnn_repo")
+if TRYCNN_REPO_PATH not in sys.path:
+    sys.path.append(TRYCNN_REPO_PATH)
+
+_cnn_predictor = None
+
+
+def get_cnn_predictor():
+    global _cnn_predictor
+    if _cnn_predictor is not None:
+        return _cnn_predictor
+    try:
+        from predict import PechayPredictor
+        model_path = os.path.join(TRYCNN_REPO_PATH, "pechay_cnn_model_20251212_184656.pth")
+        if not os.path.exists(model_path):
+            return None
+        _cnn_predictor = PechayPredictor(model_path, device='cpu')
+        return _cnn_predictor
+    except Exception as e:
+        print(f"Error loading CNN predictor: {e}")
+        return None
 
 @app.route('/')
 def index():
@@ -171,14 +193,54 @@ def dashboard():
                     print(f"Filename: {filename}")
                     print(f"User ID: {user_id}")
                     
-                    # Process image with detection service
+                    # Process image with detection service (Roboflow API first)
                     from services.detection_service import DetectionService
                     print(f"\n=== Starting Detection Service ===")
                     detection_service = DetectionService()
-                    print(f"Calling API for image detection...")
+                    print(f"Calling API for image detection (Roboflow)...")
                     detection_result = detection_service.detect_leaf(filepath)
-                    print(f"=== Detection Complete ===")
+                    
+                    # Ensure image_path is set for dashboard display
+                    if isinstance(detection_result, dict):
+                        detection_result['image_path'] = f"uploads/{filename}"
+                    print(f"=== Detection Complete (API) ===")
                     print(f"Result: {detection_result}")
+                    
+                    # If API returned an error, fall back to local CNN/AI pipeline
+                    use_cnn_fallback = False
+                    if not isinstance(detection_result, dict):
+                        use_cnn_fallback = True
+                    else:
+                        api_error = detection_result.get('error')
+                        if api_error:
+                            print(f"API error detected: {api_error}")
+                            use_cnn_fallback = True
+                    
+                    if use_cnn_fallback:
+                        try:
+                            print("\n=== Falling back to local CNN/AI detection ===")
+                            from trycnn_repo.app import detect_leaf_condition
+                            cnn_result = detect_leaf_condition(filepath)
+                            print(f"=== CNN/AI Fallback Result ===")
+                            print(cnn_result)
+                            
+                            if isinstance(cnn_result, dict):
+                                detection_result = {
+                                    'filename': filename,
+                                    'condition': cnn_result.get('condition', 'Unknown'),
+                                    'disease_name': cnn_result.get('disease_name'),
+                                    'confidence': cnn_result.get('confidence', 0.0),
+                                    'probabilities': cnn_result.get('all_probabilities', {}),
+                                    'recommendations': cnn_result.get('recommendations', {}),
+                                    'treatment': cnn_result.get('treatment', ''),
+                                    'error': None,
+                                    'validation_details': cnn_result.get('validation_reason'),
+                                    'is_fallback': True,
+                                    'method': 'CNN/AI Fallback',
+                                    'image_path': f"uploads/{filename}"
+                                }
+                        except Exception as e:
+                            print(f"CNN/AI fallback error: {e}")
                     
                     # Save detection result to database
                     from services.database_service import DatabaseService
@@ -261,28 +323,175 @@ def dashboard():
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    """Serve uploaded files"""
     return send_from_directory('uploads', filename)
+
+
+@app.route('/uploads/dataset/<filename>')
+def uploaded_dataset_file(filename):
+    return send_from_directory(os.path.join('uploads', 'dataset'), filename)
+
+
+@app.route('/upload_image_immediate', methods=['POST'])
+def upload_image_immediate():
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+    
+    try:
+        uploads_dir = os.path.join('uploads', 'dataset')
+        os.makedirs(uploads_dir, exist_ok=True)
+        
+        filename = secure_filename(file.filename)
+        unique_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+        filepath = os.path.join(uploads_dir, unique_filename)
+        file.save(filepath)
+        
+        from services.database_service import DatabaseService
+        from db import create_yolo_file
+        db_service = DatabaseService()
+        user_id = session.get('user_id')
+        condition = request.form.get('condition', 'Healthy')
+        disease_select = request.form.get('disease_select', '')
+        new_disease_name = request.form.get('new_disease_name', '').strip()
+        treatment = request.form.get('treatment', '').strip()
+        if condition not in ['Healthy', 'Diseased']:
+            condition = 'Healthy'
+        disease_name = None
+        if condition == 'Diseased':
+            if disease_select == 'new':
+                disease_name = new_disease_name or 'Unknown Disease'
+            elif disease_select:
+                disease_name = disease_select
+        label = 'Healthy' if condition == 'Healthy' else 'Diseased'
+        db_service.add_dataset_image(
+            user_id=user_id,
+            filename=unique_filename,
+            label=label,
+            image_path=f"/uploads/dataset/{unique_filename}"
+        )
+        embedding_list = None
+        predictor = get_cnn_predictor()
+        if predictor is not None:
+            try:
+                features = predictor.extract_features(filepath)
+                if features is not None:
+                    embedding_list = [float(x) for x in features.flatten().tolist()] if hasattr(features, "flatten") else [float(x) for x in features]
+            except Exception as e:
+                print(f"Error generating embedding: {e}")
+        db_service.save_petchay_dataset_entry(
+            filename=unique_filename,
+            condition=condition,
+            disease_name=disease_name,
+            image_url=f"/uploads/dataset/{unique_filename}",
+            embedding=embedding_list,
+            user_id=user_id
+        )
+        dataset_type = disease_name if disease_name else condition
+        create_yolo_file(
+            filename=unique_filename,
+            file_type="image",
+            dataset_type=dataset_type,
+            url=f"/uploads/dataset/{unique_filename}",
+            treatment=treatment if condition == 'Diseased' and treatment else None
+        )
+        try:
+            supabase.table("yolo_files").update({
+                "label": label,
+                "label_confidence": 1.0,
+                "image_region": "leaf",
+                "quality_score": 0.9,
+                "is_verified": True
+            }).eq("filename", unique_filename).execute()
+        except Exception as e:
+            print(f"Error updating yolo_files label fields: {e}")
+        
+        return jsonify({'success': True, 'filename': unique_filename}), 200
+    except Exception as e:
+        print(f"Immediate upload error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/dataset')
 def dataset_manager():
-    dataset_stats = {
-        'total_images': 0,
-        'healthy_count': 0,
-        'diseased_count': 0
-    }
-    dataset_images = []
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    from services.database_service import DatabaseService
+    db_service = DatabaseService()
+    user_id = session.get('user_id')
+    dataset_stats = db_service.get_dataset_stats(user_id)
+    dataset_images = db_service.get_dataset_images(user_id=user_id, limit=100)
     return render_template('dataset_manager.html',
                          dataset_stats=dataset_stats,
                          dataset_images=dataset_images)
 
+
+@app.route('/upload_dataset_workflow', methods=['POST'])
+def upload_dataset_workflow():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        condition = request.form.get('condition', 'Healthy')
+        disease_select = request.form.get('disease_select', '')
+        new_disease_name = request.form.get('new_disease_name', '').strip()
+        treatment = request.form.get('treatment', '').strip()
+        
+        if condition not in ['Healthy', 'Diseased']:
+            condition = 'Healthy'
+        
+        disease_name = None
+        if condition == 'Diseased':
+            if disease_select == 'new':
+                disease_name = new_disease_name or 'Unknown Disease'
+            elif disease_select:
+                disease_name = disease_select
+        
+        parts = [f"Condition: {condition}"]
+        if disease_name:
+            parts.append(f"Disease: {disease_name}")
+        if treatment:
+            parts.append("Treatment notes saved")
+        
+        flash(' | '.join(parts))
+    except Exception as e:
+        flash(f"Error processing dataset workflow: {e}")
+    
+    return redirect(url_for('dataset_manager'))
+
 @app.route('/report')
 def report():
-    return render_template('report.html')
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session.get('user_id')
+    
+    from services.database_service import DatabaseService
+    db_service = DatabaseService()
+    
+    stats = db_service.get_dashboard_stats(user_id)
+    results = db_service.get_user_detections(user_id, limit=100)
+    
+    filters = {
+        'condition': request.args.get('filter') or 'All',
+        'range': request.args.get('range') or 'All time'
+    }
+    
+    return render_template(
+        'report.html',
+        username=session.get('user'),
+        date=datetime.now(),
+        filters=filters,
+        stats=stats,
+        results=results
+    )
 
 if __name__ == '__main__':
     # Get port from environment variable (Render provides this) or default to 5000
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') == 'development'
     app.run(debug=debug, host='0.0.0.0', port=port)
-

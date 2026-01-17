@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime
 import io
 import base64
+import os
 
 class DatabaseService:
     """Service for database operations"""
@@ -15,9 +16,14 @@ class DatabaseService:
     def save_detection(user_id: str, image_path: str, detection_result: Dict) -> Optional[Dict]:
         """Save detection result to detection_results table"""
         try:
+            condition = detection_result.get('condition', 'Unknown')
+            if condition not in ['Healthy', 'Diseased']:
+                print(f"Warning: Invalid condition '{condition}', defaulting to 'Diseased'")
+                condition = 'Diseased'
+            
             detection_data = {
                 'filename': detection_result.get('filename', 'unknown.jpg'),
-                'condition': detection_result.get('condition', 'Unknown'),
+                'condition': condition,
                 'confidence': float(detection_result.get('confidence', 0.0)),
                 'image_path': image_path,
                 'user_id': user_id,
@@ -25,15 +31,38 @@ class DatabaseService:
                 'all_probabilities': detection_result.get('probabilities', {}),
                 'recommendations': detection_result.get('recommendations', {})
             }
-            
-            # Add disease_name if available
-            if detection_result.get('disease_name'):
-                detection_data['disease_name'] = detection_result.get('disease_name')
-            
-            response = supabase.table(TABLES['detections']).insert(detection_data).execute()
-            return response.data[0] if response.data else None
+
+            disease_name = detection_result.get('disease_name')
+            if disease_name:
+                disease_name_str = str(disease_name).strip()
+                if disease_name_str and disease_name_str != 'Unknown':
+                    detection_data['disease_name'] = disease_name_str
+
+            if detection_result.get('method'):
+                detection_data['detection_method'] = detection_result.get('method')
+
+            for attempt in range(2):
+                print(f"Saving detection to database (attempt {attempt + 1}): {detection_data}")
+                try:
+                    response = supabase.table(TABLES['detections']).insert(detection_data).execute()
+                    
+                    if response.data and len(response.data) > 0:
+                        print(f"✓ Detection saved successfully: {response.data[0].get('id')}")
+                        return response.data[0]
+                    else:
+                        print("⚠ Warning: Insert succeeded but no data returned")
+                        return None
+                except Exception as e_inner:
+                    print(f"❌ Error on insert attempt {attempt + 1}: {e_inner}")
+                    if 'PGRST204' in str(e_inner) and attempt == 0:
+                        detection_data.pop('disease_name', None)
+                        detection_data.pop('detection_method', None)
+                        continue
+                    import traceback
+                    traceback.print_exc()
+                    return None
         except Exception as e:
-            print(f"Error saving detection: {e}")
+            print(f"❌ Error saving detection: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -141,6 +170,84 @@ class DatabaseService:
                 'healthy_count': 0,
                 'diseased_count': 0
             }
+    
+    @staticmethod
+    def add_dataset_image(user_id: Optional[str], filename: str, label: str, image_path: str, split: str = 'train', metadata: Optional[Dict] = None) -> Optional[Dict]:
+        try:
+            data = {
+                'filename': filename,
+                'label': label,
+                'image_path': image_path,
+                'split': split,
+                'metadata': metadata or {}
+            }
+            
+            if user_id:
+                data['user_id'] = user_id
+            
+            response = supabase.table(TABLES['dataset_images']).insert(data).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            print(f"Error adding dataset image: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    @staticmethod
+    def get_dataset_images(user_id: Optional[str] = None, limit: int = 100) -> List[Dict]:
+        try:
+            query = supabase.table(TABLES['dataset_images']).select('*')
+            if user_id:
+                query = query.eq('user_id', user_id)
+            
+            response = query.order('created_at', desc=True).limit(limit).execute()
+            rows = response.data if response.data else []
+            
+            images: List[Dict[str, Any]] = []
+            for row in rows:
+                images.append({
+                    'filename': row.get('filename', ''),
+                    'label': row.get('label', ''),
+                    'image_url': row.get('image_path', ''),
+                    'created_at': row.get('created_at') or row.get('timestamp', '')
+                })
+            
+            return images
+        except Exception as e:
+            print(f"Error getting dataset images: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+    @staticmethod
+    def save_petchay_dataset_entry(
+        filename: str,
+        condition: str,
+        disease_name: Optional[str],
+        image_url: str,
+        embedding: Optional[List[float]],
+        user_id: Optional[str] = None
+    ) -> Optional[Dict]:
+        try:
+            data: Dict[str, Any] = {
+                'filename': filename,
+                'condition': condition,
+                'image_url': image_url,
+                'embedding': embedding
+            }
+            
+            if disease_name:
+                data['disease_name'] = disease_name
+            if user_id:
+                data['user_id'] = user_id
+            
+            response = supabase.table(TABLES['petchay_dataset']).insert(data).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            print(f"Error saving petchay_dataset entry: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
     
     @staticmethod
     def create_user(username: str, email: str, password: str) -> Optional[Dict]:

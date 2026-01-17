@@ -6,38 +6,75 @@ from typing import Dict, List, Optional
 DISEASE_INFO = {
     'Alternaria': {
         'name': 'Alternaria Leaf Spot',
-        'description': 'Fungal disease causing dark spots on leaves',
+        'description': 'Fungal disease causing dark spots on pechay leaves',
         'symptoms': [
-            'Dark brown to black circular spots',
-            'Concentric rings on lesions',
-            'Yellowing around spots',
-            'Leaf curling and wilting'
+            'Round to irregular dark brown / black spots',
+            'Often with yellow halo',
+            'Spots may have concentric rings',
+            'Affects leaf surface first'
         ],
-        'treatment': """1. Remove and destroy infected leaves
-2. Apply fungicide (Mancozeb or Copper-based)
-3. Improve air circulation
-4. Avoid overhead watering
-5. Use resistant varieties if available
-6. Practice crop rotation""",
+        'treatment': """1. ALTERNARIA LEAF SPOT (FUNGAL)
+🔬 Cause
+Fungus: Alternaria brassicae / A. brassicicola
+
+🔍 Key Symptoms
+• Round to irregular dark brown / black spots
+• Often with yellow halo
+• Spots may have concentric rings
+• Affects leaf surface first
+
+✅ TREATMENT
+
+Fungicides (MOST EFFECTIVE):
+• Mancozeb
+• Chlorothalonil
+• Copper fungicide
+🕒 Spray every 7–10 days
+
+Organic options:
+• Neem oil (5–10 ml/L water)
+• Baking soda spray
+
+🧹 Cultural Control
+• Remove infected leaves
+• Improve air circulation
+• Avoid overhead watering""",
         'urgency': 'medium',
         'severity': 'moderate'
     },
     'Blackrot': {
-        'name': 'Black Rot',
+        'name': 'Bacterial Black Rot',
         'description': 'Bacterial disease causing blackening of leaves',
         'symptoms': [
-            'V-shaped yellow lesions',
-            'Blackening of leaf veins',
-            'Leaf drop',
-            'Stunted growth'
+            'V-shaped yellow lesions starting from leaf edge',
+            'Veins turn black',
+            'Wilting and leaf collapse',
+            'Spreads quickly during rainy season'
         ],
-        'treatment': """1. Remove affected plants immediately
-2. Apply copper-based bactericide
-3. Avoid overhead irrigation
-4. Use disease-free seeds
-5. Practice crop rotation (3-4 years)
-6. Maintain proper spacing between plants
-7. Avoid working in fields when plants are wet""",
+        'treatment': """🦠 2. BACTERIAL BLACK ROT (BACTERIAL)
+🔬 Cause
+Bacterium: Xanthomonas campestris
+
+🔍 Key Symptoms
+• V-shaped yellow lesions starting from leaf edge
+• Veins turn black
+• Wilting and leaf collapse
+• Spreads quickly during rainy season
+
+✅ TREATMENT
+
+⚠️ No cure once severe
+
+Control methods:
+• Copper-based bactericide
+• Streptomycin (where allowed)
+🕒 Spray every 5–7 days (preventive)
+
+🧹 Cultural Control (VERY IMPORTANT)
+• Remove and destroy infected plants
+• Use disease-free seeds
+• Crop rotation (2–3 seasons)
+• Sanitize tools and hands""",
         'urgency': 'high',
         'severity': 'severe'
     },
@@ -112,6 +149,7 @@ def get_condition_from_disease(disease_name: str) -> str:
     if 'healthy' in disease_name.lower() or disease_name.lower() == 'healthy-pechay':
         return 'Healthy'
     return 'Diseased'
+
 
 
 

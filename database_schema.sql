@@ -69,6 +69,10 @@ CREATE TABLE IF NOT EXISTS public.detection_results (
   )
 ) TABLESPACE pg_default;
 
+ALTER TABLE public.detection_results
+  ADD COLUMN IF NOT EXISTS disease_name CHARACTER VARYING(100),
+  ADD COLUMN IF NOT EXISTS detection_method CHARACTER VARYING(50);
+
 CREATE INDEX IF NOT EXISTS idx_detection_results_filename ON public.detection_results USING btree (filename) TABLESPACE pg_default;
 CREATE INDEX IF NOT EXISTS idx_detection_results_condition ON public.detection_results USING btree (condition) TABLESPACE pg_default;
 CREATE INDEX IF NOT EXISTS idx_detection_results_user_id ON public.detection_results USING btree (user_id) TABLESPACE pg_default;
@@ -242,6 +246,9 @@ BEGIN
     RAISE NOTICE 'Database schema created successfully!';
     RAISE NOTICE 'Tables created: users, file_uploads, detection_results, petchay_dataset, dataset_images, yolo_files, embeddings';
 END $$;
+
+
+
 
 
 
