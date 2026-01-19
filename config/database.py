@@ -5,11 +5,12 @@ from supabase import create_client, Client
 import os
 
 # Supabase configuration
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "") or "https://zqkqmjlepigpwfykwzey.supabase.co"
 SUPABASE_KEY = (
     os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     or os.getenv("SUPABASE_ANON_KEY")
     or os.getenv("SUPABASE_KEY", "")
+    or "sb_publishable_HNgog4XZVoR6FqaKuzIcGQ_7yrDAjFn"
 )
 
 # Initialize Supabase client

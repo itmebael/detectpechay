@@ -17,7 +17,8 @@ class DatabaseService:
         """Save detection result to detection_results table"""
         try:
             condition = detection_result.get('condition', 'Unknown')
-            if condition not in ['Healthy', 'Diseased']:
+            allowed_conditions = ['Healthy', 'Diseased', 'Not Pechay']
+            if condition not in allowed_conditions:
                 print(f"Warning: Invalid condition '{condition}', defaulting to 'Diseased'")
                 condition = 'Diseased'
             
