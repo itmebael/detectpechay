@@ -36,6 +36,11 @@ except ImportError:
     FACE_RECOGNITION_AVAILABLE = False
     print("Warning: face_recognition not available. Install with: pip install face-recognition")
 
+ENABLE_HEAVY_VALIDATION = os.getenv("ENABLE_HEAVY_VALIDATION", "0") == "1"
+if not ENABLE_HEAVY_VALIDATION:
+    YOLO_AVAILABLE = False
+    FACE_RECOGNITION_AVAILABLE = False
+
 class DetectionService:
     """Service for detecting leaf diseases using Roboflow API"""
     
@@ -553,9 +558,11 @@ class DetectionService:
             
             if class_name == 'Unknown' or confidence == 0.0:
                 if isinstance(predictions, list) and len(predictions) == 0:
-                    print("No predictions returned by API; treating as Healthy result")
-                    class_name = 'Healthy-Pechay'
-                    confidence = 0.9
+                    print("No predictions returned by API; treating as Not Pechay / unknown result")
+                    return self._get_default_result(
+                        filename,
+                        error="No predictions returned by Roboflow API (empty result)."
+                    )
                 else:
                     print("⚠️ Warning: Could not extract valid prediction from API response, trying additional formats...")
                     if isinstance(result, dict):
@@ -659,17 +666,21 @@ class DetectionService:
         """Normalize class name from API to match disease_info format"""
         class_name = str(class_name).strip()
         
-        # Map common variations
+        normalized_key = class_name.lower().replace(' ', '').replace('_', '').replace('-', '')
         name_mapping = {
             'healthy': 'Healthy-Pechay',
+            'healthypechay': 'Healthy-Pechay',
             'healthy-pechay': 'Healthy-Pechay',
             'alternaria': 'Alternaria',
             'blackrot': 'Blackrot',
+            'blackrotbacterial': 'Blackrot',
+            'bacterialblackrot': 'Blackrot',
             'black-rot': 'Blackrot',
+            'leafspot': 'Leaf Spot',
             'leaf-spot': 'Leaf Spot'
         }
         
-        normalized = name_mapping.get(class_name.lower(), class_name)
+        normalized = name_mapping.get(normalized_key, class_name)
         return normalized
     
     def _validate_pechay_image(self, image_path: str) -> Dict:
@@ -723,6 +734,13 @@ class DetectionService:
                 if green_validation['green_percentage'] < 10:
                     validation_errors.append('wall_background')
                     reasons.append("Image appears to be a wall or background - not a pechay leaf")
+            
+            # 5. Optional YOLO-based validation for obvious non-leaf objects
+            if YOLO_AVAILABLE:
+                yolo_validation = self._validate_with_yolo(image_path)
+                if not yolo_validation.get('is_valid'):
+                    validation_errors.extend(yolo_validation.get('errors', []))
+                    reasons.extend(yolo_validation.get('reasons', []))
             
             # Relaxed: Leaf shape check is too strict for zoomed-in images
             # leaf_shape = self._check_leaf_shape(image)

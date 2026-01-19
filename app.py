@@ -160,6 +160,8 @@ def dashboard():
         return redirect(url_for('login'))
     
     page = request.args.get('page', 'dashboard')
+    if page == 'up':
+        page = 'upload'
     user_id = session.get('user_id')
     
     # Debug logging
@@ -199,48 +201,21 @@ def dashboard():
                     detection_service = DetectionService()
                     print(f"Calling API for image detection (Roboflow)...")
                     detection_result = detection_service.detect_leaf(filepath)
+                    api_result = detection_result if isinstance(detection_result, dict) else None
                     
-                    # Ensure image_path is set for dashboard display
                     if isinstance(detection_result, dict):
                         detection_result['image_path'] = f"uploads/{filename}"
                     print(f"=== Detection Complete (API) ===")
                     print(f"Result: {detection_result}")
                     
-                    # If API returned an error, fall back to local CNN/AI pipeline
-                    use_cnn_fallback = False
-                    if not isinstance(detection_result, dict):
-                        use_cnn_fallback = True
-                    else:
+                    api_error = None
+                    if isinstance(detection_result, dict):
                         api_error = detection_result.get('error')
+                        api_condition = detection_result.get('condition')
+                        api_disease = detection_result.get('disease_name')
                         if api_error:
                             print(f"API error detected: {api_error}")
-                            use_cnn_fallback = True
-                    
-                    if use_cnn_fallback:
-                        try:
-                            print("\n=== Falling back to local CNN/AI detection ===")
-                            from trycnn_repo.app import detect_leaf_condition
-                            cnn_result = detect_leaf_condition(filepath)
-                            print(f"=== CNN/AI Fallback Result ===")
-                            print(cnn_result)
-                            
-                            if isinstance(cnn_result, dict):
-                                detection_result = {
-                                    'filename': filename,
-                                    'condition': cnn_result.get('condition', 'Unknown'),
-                                    'disease_name': cnn_result.get('disease_name'),
-                                    'confidence': cnn_result.get('confidence', 0.0),
-                                    'probabilities': cnn_result.get('all_probabilities', {}),
-                                    'recommendations': cnn_result.get('recommendations', {}),
-                                    'treatment': cnn_result.get('treatment', ''),
-                                    'error': None,
-                                    'validation_details': cnn_result.get('validation_reason'),
-                                    'is_fallback': True,
-                                    'method': 'CNN/AI Fallback',
-                                    'image_path': f"uploads/{filename}"
-                                }
-                        except Exception as e:
-                            print(f"CNN/AI fallback error: {e}")
+                            print("Skipping heavy CNN/AI fallback due to environment limits; using API result only.")
                     
                     # Save detection result to database
                     from services.database_service import DatabaseService
@@ -330,6 +305,10 @@ def uploaded_file(filename):
 def uploaded_dataset_file(filename):
     return send_from_directory(os.path.join('uploads', 'dataset'), filename)
 
+@app.route('/healthz')
+def healthz():
+    return jsonify({'status': 'ok'}), 200
+
 
 @app.route('/upload_image_immediate', methods=['POST'])
 def upload_image_immediate():
@@ -357,7 +336,7 @@ def upload_image_immediate():
         disease_select = request.form.get('disease_select', '')
         new_disease_name = request.form.get('new_disease_name', '').strip()
         treatment = request.form.get('treatment', '').strip()
-        if condition not in ['Healthy', 'Diseased']:
+        if condition not in ['Healthy', 'Diseased', 'Not Pechay']:
             condition = 'Healthy'
         disease_name = None
         if condition == 'Diseased':

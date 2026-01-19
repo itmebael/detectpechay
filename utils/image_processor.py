@@ -15,14 +15,8 @@ except ImportError:
     FACE_RECOGNITION_AVAILABLE = False
     print("Warning: face_recognition not available. Face detection will be skipped.")
 
-try:
-    from ultralytics import YOLO
-    YOLO_AVAILABLE = True
-    YOLO_MODEL = None  # Will be loaded on first use
-except ImportError:
-    YOLO_AVAILABLE = False
-    YOLO_MODEL = None
-    print("Warning: ultralytics not available. YOLO object filtering will be skipped.")
+YOLO_AVAILABLE = False
+YOLO_MODEL = None
 
 class ImageProcessor:
     """Handles image validation and preprocessing"""
@@ -286,6 +280,5 @@ class ImageProcessor:
         except Exception as e:
             print(f"Error loading image: {e}")
             return None
-
 
 
