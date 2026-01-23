@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pechay Detection Report</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; max-width: 900px; margin: 0 auto; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; max-width: 900px; margin: 0 auto; background-color: white; }
     h1 { color: #2e7d32; border-bottom: 2px solid #2e7d32; padding-bottom: 10px; margin-bottom: 30px; }
     h2 { color: #388e3c; margin-top: 30px; border-left: 5px solid #388e3c; padding-left: 10px; }
     .meta { color: #666; margin-bottom: 30px; font-style: italic; background: #f9f9f9; padding: 15px; border-radius: 5px; }
@@ -24,15 +24,44 @@
       background: #2e7d32; color: white; border: none; padding: 10px 20px; 
       border-radius: 5px; cursor: pointer; font-weight: bold; 
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+    .download-btn {
+      position: fixed; top: 20px; right: 180px;
+      background: #1976d2; color: white; border: none; padding: 10px 20px; 
+      border-radius: 5px; cursor: pointer; font-weight: bold; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      text-decoration: none;
+      display: inline-block;
+      font-size: 13.3333px;
+      z-index: 1000;
+    }
+    .download-btn:hover {
+      background: #1565c0;
+    }
+    .back-btn {
+      position: fixed; top: 20px; left: 20px;
+      background: white; color: #333; border: 1px solid #ccc; padding: 10px 20px; 
+      border-radius: 5px; cursor: pointer; font-weight: bold; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      text-decoration: none;
+      display: inline-block;
+      font-size: 13.3333px;
+      z-index: 1000;
+    }
+    .back-btn:hover {
+      background: #f5f5f5;
     }
     @media print {
-      .print-btn { display: none; }
+      .print-btn, .download-btn, .back-btn { display: none; }
       body { padding: 0; }
     }
   </style>
 </head>
 <body>
+  <a href="{{ url_for('dashboard') }}" class="back-btn">⬅️ Back to Dashboard</a>
   <button class="print-btn" onclick="window.print()">🖨️ Print Report</button>
+  <a href="{{ url_for('download_report', filter=filters.condition, range=filters.range) }}" class="download-btn">📥 Download Excel</a>
 
   <h1><img src="{{ url_for('static', filename='images/logo.svg') }}" style="height: 50px; margin-right: 15px;"> Pechay Leaf Detection Report</h1>
   

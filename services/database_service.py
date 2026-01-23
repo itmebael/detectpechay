@@ -22,15 +22,14 @@ class DatabaseService:
                 print(f"Warning: Invalid condition '{condition}', defaulting to 'Diseased'")
                 condition = 'Diseased'
             
+            # Map to schema: id, user_id, image_path, condition, confidence, created_at, disease_name, filename
             detection_data = {
-                'filename': detection_result.get('filename', 'unknown.jpg'),
                 'condition': condition,
                 'confidence': float(detection_result.get('confidence', 0.0)),
                 'image_path': image_path,
                 'user_id': user_id,
-                'timestamp': datetime.now().isoformat(),
-                'all_probabilities': detection_result.get('probabilities', {}),
-                'recommendations': detection_result.get('recommendations', {})
+                'created_at': datetime.now().isoformat(),
+                'filename': detection_result.get('filename') or os.path.basename(image_path)
             }
 
             disease_name = detection_result.get('disease_name')
@@ -38,9 +37,6 @@ class DatabaseService:
                 disease_name_str = str(disease_name).strip()
                 if disease_name_str and disease_name_str != 'Unknown':
                     detection_data['disease_name'] = disease_name_str
-
-            if detection_result.get('method'):
-                detection_data['detection_method'] = detection_result.get('method')
 
             for attempt in range(2):
                 print(f"Saving detection to database (attempt {attempt + 1}): {detection_data}")
@@ -56,8 +52,8 @@ class DatabaseService:
                 except Exception as e_inner:
                     print(f"❌ Error on insert attempt {attempt + 1}: {e_inner}")
                     if 'PGRST204' in str(e_inner) and attempt == 0:
+                        # If column error, try removing optional fields that might not exist
                         detection_data.pop('disease_name', None)
-                        detection_data.pop('detection_method', None)
                         continue
                     import traceback
                     traceback.print_exc()
@@ -79,22 +75,26 @@ class DatabaseService:
             if condition:
                 query = query.eq('condition', condition)
             
-            response = query.order('timestamp', desc=True)\
+            response = query.order('created_at', desc=True)\
                 .limit(limit)\
                 .execute()
             
             # Format results to match template expectations
             formatted_results = []
             for row in (response.data if response.data else []):
+                # Extract filename from image_path if not present
+                filename = row.get('filename')
+                if not filename and row.get('image_path'):
+                    filename = os.path.basename(row.get('image_path'))
+                
                 formatted_results.append({
-                    'filename': row.get('filename', 'unknown.jpg'),
+                    'filename': filename or 'unknown.jpg',
                     'condition': row.get('condition', 'Unknown'),
                     'disease_name': row.get('disease_name'),
                     'confidence': float(row.get('confidence', 0.0)),
-                    'timestamp': row.get('timestamp', row.get('created_at', '')),
+                    'timestamp': row.get('created_at', ''),
                     'image_path': row.get('image_path', ''),
-                    'recommendations': row.get('recommendations', {}),
-                    'treatment': row.get('recommendations', {}).get('action', '') if isinstance(row.get('recommendations'), dict) else ''
+                    'treatment': row.get('recommendation', '')
                 })
             
             return formatted_results

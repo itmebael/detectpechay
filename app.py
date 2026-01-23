@@ -45,102 +45,137 @@ def login():
     mode = request.args.get('mode', 'login')
     
     if request.method == 'POST':
-        if request.form.get('action') == 'register':
-            # Registration logic with Supabase
-            username = request.form.get('username')
-            email = request.form.get('email')
-            password = request.form.get('password')
-            confirm_password = request.form.get('confirm_password')
+        # Login logic - Try both Supabase Auth and custom users table
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if not username or not password:
+            return render_template('login.html', mode='login', error='Please provide username and password')
+        
+        from services.database_service import DatabaseService
+        import hashlib
+        db_service = DatabaseService()
+        
+        try:
+            # Use custom users table for authentication
+            user = None
             
-            if password != confirm_password:
-                return render_template('login.html', mode='register', error='Passwords do not match')
+            # Try email first
+            if '@' in username:
+                user = db_service.get_user_by_email(username)
             
-            try:
-                from services.database_service import DatabaseService
-                import hashlib
-                db_service = DatabaseService()
-                
-                # Check if user already exists
-                existing_user = db_service.get_user_by_email(email)
-                if existing_user:
-                    return render_template('login.html', mode='register', error='Email already registered')
-                
-                existing_user = db_service.get_user_by_username(username)
-                if existing_user:
-                    return render_template('login.html', mode='register', error='Username already taken')
-                
-                # Hash password (using SHA256 for now - use bcrypt in production!)
+            # If not found or not an email, try username
+            if not user:
+                user = db_service.get_user_by_username(username)
+            
+            if user:
+                # Verify password
+                stored_password = user.get('password', '')
                 password_hash = hashlib.sha256(password.encode()).hexdigest()
                 
-                # Save to custom users table
-                user_result = db_service.create_user(username, email, password_hash)
-                
-                if user_result:
-                    flash('Registration successful! Please login.')
-                    return redirect(url_for('login', mode='login'))
-                else:
-                    return render_template('login.html', mode='register', error='Registration failed. Please try again.')
-            except Exception as e:
-                print(f"Registration error: {e}")
-                import traceback
-                traceback.print_exc()
-                return render_template('login.html', mode='register', error=f'Registration error: {str(e)}')
-        else:
-            # Login logic - Try both Supabase Auth and custom users table
-            username = request.form.get('username')
-            password = request.form.get('password')
-            
-            if not username or not password:
-                return render_template('login.html', mode='login', error='Please provide username and password')
-            
-            from services.database_service import DatabaseService
-            import hashlib
-            db_service = DatabaseService()
-            
-            try:
-                # Use custom users table for authentication
-                user = None
-                
-                # Try email first
-                if '@' in username:
-                    user = db_service.get_user_by_email(username)
-                
-                # If not found or not an email, try username
-                if not user:
-                    user = db_service.get_user_by_username(username)
-                
-                if user:
-                    # Verify password
-                    stored_password = user.get('password', '')
-                    password_hash = hashlib.sha256(password.encode()).hexdigest()
+                # Check if password matches (plain text or hashed)
+                if stored_password == password or stored_password == password_hash:
+                    # Login successful - set session
+                    session['user'] = user.get('username', username)
+                    session['user_id'] = str(user.get('id'))  # Convert UUID to string
+                    session['user_email'] = user.get('email', username)
+                    session['user_full'] = user  # Store full user object if needed
                     
-                    # Check if password matches (plain text or hashed)
-                    if stored_password == password or stored_password == password_hash:
-                        # Login successful - set session
-                        session['user'] = user.get('username', username)
-                        session['user_id'] = str(user.get('id'))  # Convert UUID to string
-                        session['user_email'] = user.get('email', username)
-                        session['user_full'] = user  # Store full user object if needed
-                        
-                        print(f"Login successful for user: {user.get('username')} (ID: {user.get('id')})")
-                        return redirect(url_for('dashboard', page='dashboard'))
-                    else:
-                        return render_template('login.html', mode='login', error='Invalid password.')
+                    print(f"Login successful for user: {user.get('username')} (ID: {user.get('id')})")
+                    return redirect(url_for('dashboard', page='dashboard'))
                 else:
-                    return render_template('login.html', mode='login', error='User not found. Please register first.')
-            except Exception as e:
-                print(f"Login error: {e}")
-                import traceback
-                traceback.print_exc()
-                # Don't expose internal errors to user, but log them
-                error_msg = 'Invalid credentials'
-                if 'email' in str(e).lower() or 'user' in str(e).lower():
-                    error_msg = 'User not found. Please register first.'
-                return render_template('login.html', mode='login', error=error_msg)
+                    return render_template('login.html', mode='login', error='Invalid password.')
+            else:
+                return render_template('login.html', mode='login', error='User not found. Please register first.')
+        except Exception as e:
+            print(f"Login error: {e}")
+            import traceback
+            traceback.print_exc()
+            # Don't expose internal errors to user, but log them
+            error_msg = 'Invalid credentials'
+            if 'email' in str(e).lower() or 'user' in str(e).lower():
+                error_msg = 'User not found. Please register first.'
+            return render_template('login.html', mode='login', error=error_msg)
     
     error = request.args.get('error')
     success = request.args.get('success')
     return render_template('login.html', mode=mode, error=error, success=success)
+
+@app.route('/api/detect_live', methods=['POST'])
+def detect_live():
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    try:
+        data = request.json
+        if not data or 'image' not in data:
+            return jsonify({'error': 'No image data'}), 400
+            
+        image_data = data['image']
+        # Remove header if present (data:image/jpeg;base64,...)
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+            
+        # Decode base64
+        import base64
+        import numpy as np
+        import cv2
+        
+        img_bytes = base64.b64decode(image_data)
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return jsonify({'error': 'Invalid image'}), 400
+            
+        # Save temporarily for processing
+        user_id = session.get('user_id')
+        filename = f"live_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+        uploads_dir = os.path.join('uploads')
+        os.makedirs(uploads_dir, exist_ok=True)
+        filepath = os.path.join(uploads_dir, filename)
+        
+        cv2.imwrite(filepath, img)
+        
+        # Run detection
+        from services.detection_service import DetectionService
+        detection_service = DetectionService()
+        detection_result = detection_service.detect_leaf(filepath)
+        
+        # Check if we should save (Auto-capture logic)
+        # Save if it is a Pechay (Healthy or Diseased) and confidence is high
+        should_save = False
+        condition = detection_result.get('condition', 'Unknown')
+        
+        if condition in ['Healthy', 'Diseased']:
+            should_save = True
+            
+        saved_result = None
+        if should_save:
+            from services.database_service import DatabaseService
+            db_service = DatabaseService()
+            
+            # Add specific live detection metadata
+            detection_result['method'] = 'Live Stream Auto-Capture'
+            
+            saved_result = db_service.save_detection(
+                user_id=user_id,
+                image_path=f"uploads/{filename}",
+                detection_result=detection_result
+            )
+            
+        return jsonify({
+            'success': True,
+            'result': detection_result,
+            'saved': saved_result is not None,
+            'saved_id': saved_result.get('id') if saved_result else None
+        })
+        
+    except Exception as e:
+        print(f"Live detection error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/logout')
 def logout():
@@ -468,6 +503,41 @@ def report():
         stats=stats,
         results=results
     )
+
+@app.route('/download_report')
+def download_report():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session.get('user_id')
+    from services.database_service import DatabaseService
+    db_service = DatabaseService()
+    
+    # Get results (same as report)
+    results = db_service.get_user_detections(user_id, limit=100)
+    
+    # Create CSV
+    import io
+    import csv
+    from flask import make_response
+    
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['Date', 'Filename', 'Condition', 'Confidence', 'Disease Name'])
+    
+    for r in results:
+        cw.writerow([
+            r.get('timestamp', ''),
+            r.get('filename', ''),
+            r.get('condition', ''),
+            f"{r.get('confidence', 0)}%",
+            r.get('disease_name', '')
+        ])
+        
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=pechay_report.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
 
 if __name__ == '__main__':
     # Get port from environment variable (Render provides this) or default to 5000

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pechay Detection System</title>
+<title>AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
@@ -531,7 +531,7 @@ body::before {
 <!-- Splash Screen -->
 <div class="splash-screen" id="splashScreen">
   <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="splash-logo" id="splashLogo" onclick="handleSplashClick()">
-  <div class="splash-text" id="splashText" onclick="handleSplashClick()">Pechay Leaf System</div>
+  <div class="splash-text" id="splashText" onclick="handleSplashClick()">AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</div>
 </div>
 
 <div class="layout-wrapper">
@@ -542,22 +542,11 @@ body::before {
 
   <div class="glass-container">
 
-    <h1>Pechay Leaf System</h1>
+    <h1 style="font-size: 1.5rem; text-align: center;">AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</h1>
     <h2 style="text-align: center; color: #052e16; margin-bottom: 20px; font-size: 1.4rem; font-weight: 600;">Log In</h2>
 
-    <div class="form-tabs">
-    <button class="form-tab {{ 'active' if mode == 'login' else '' }}"
-      onclick="window.location.href='?mode=login'">
-      Login
-    </button>
-    <button class="form-tab {{ 'active' if mode == 'register' else '' }}"
-      onclick="window.location.href='?mode=register'">
-      Register
-    </button>
-  </div>
-
   <!-- LOGIN -->
-  <form method="POST" class="login-form {{ 'active' if mode == 'login' else '' }}">
+  <form method="POST" class="login-form active">
     <div class="form-group">
       <i class="fas fa-user"></i>
       <input class="glass-input" name="username" placeholder="Username" required>
@@ -570,42 +559,11 @@ body::before {
 
     <button class="glass-btn">Login</button>
 
-    {% if error and mode == 'login' %}
+    {% if error %}
       <div class="error">{{ error }}</div>
     {% endif %}
     {% if success %}
       <div class="success">{{ success }}</div>
-    {% endif %}
-  </form>
-
-  <!-- REGISTER -->
-  <form method="POST" class="register-form {{ 'active' if mode == 'register' else '' }}">
-    <input type="hidden" name="action" value="register">
-
-    <div class="form-group">
-      <i class="fas fa-user"></i>
-      <input class="glass-input" name="username" placeholder="Username" required>
-    </div>
-
-    <div class="form-group">
-      <i class="fas fa-envelope"></i>
-      <input type="email" class="glass-input" name="email" placeholder="Email" required>
-    </div>
-
-    <div class="form-group">
-      <i class="fas fa-lock"></i>
-      <input type="password" class="glass-input" name="password" placeholder="Password" required>
-    </div>
-
-    <div class="form-group">
-      <i class="fas fa-lock"></i>
-      <input type="password" class="glass-input" name="confirm_password" placeholder="Confirm Password" required>
-    </div>
-
-    <button class="glass-btn">Create Account</button>
-
-    {% if error and mode == 'register' %}
-      <div class="error">{{ error }}</div>
     {% endif %}
   </form>
 

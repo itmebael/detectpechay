@@ -193,7 +193,6 @@
   <div class="sidebar">
     <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pechay System Logo" class="logo">
     <a href="{{ url_for('dashboard', page='dashboard') }}">📊 Dashboard</a>
-    <a href="{{ url_for('dataset_manager') }}" class="active">➕ Create Dataset</a>
     <a href="{{ url_for('dashboard', page='upload') }}">📸 Scan Leaf</a>
     <a href="{{ url_for('dashboard', page='results') }}">📝 Results</a>
     <a href="{{ url_for('dashboard', page='analytics') }}">📈 Analytics</a>
@@ -204,156 +203,10 @@
   <div class="main">
     <div class="header">Dataset Manager - Pechay Detection System</div>
     <div class="content">
-      
-      {% with messages = get_flashed_messages() %}
-        {% if messages %}
-          {% for m in messages %}
-            <div class="status-message">{{ m }}</div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
-
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem;">
-        
-        <!-- Workflow Section -->
-        <div class="card">
-            <h1>➕ Create / Update Dataset</h1>
-            <p>Follow the workflow below to add images to your Petchay dataset.</p>
-            
-            <!-- Main Button -->
-            <button id="main-create-btn" style="width: 100%; font-size: 1.2rem; padding: 18px; background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%); margin-bottom: 20px;" onclick="toggleWorkflow()">
-                <i class="fas fa-plus-circle"></i> ➕ Create / Update Dataset
-            </button>
-
-            <div id="dataset-workflow" style="display: none;">
-                <form action="/upload_dataset_workflow" method="post" enctype="multipart/form-data" id="datasetForm" onsubmit="return handleFormSubmit(event)">
-                    
-                    <!-- Step 1: Select Condition -->
-                    <div class="workflow-step">
-                        <h4><span class="step-number">1️⃣</span> Select Condition</h4>
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" name="condition" value="Healthy" onchange="handleConditionChange()" required>
-                                <span style="font-weight: 600; color: #2e7d32;">◯ Healthy</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="condition" value="Diseased" onchange="handleConditionChange()">
-                                <span style="font-weight: 600; color: #dc3545;">◯ Diseased</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Step 2: Disease Name (Conditional) -->
-                    <div id="step-2-diseased" class="workflow-step" style="display: none;">
-                        <h4><span class="step-number">2️⃣</span> If Diseased Is Selected</h4>
-                        <p style="font-size: 0.9rem; color: #666; margin: 10px 0;">Select Disease Name:</p>
-                        <select id="disease_select" name="disease_select" onchange="handleDiseaseSelect()">
-                            <option value="" disabled selected>-- Select a disease --</option>
-                            <option value="Black Rot">Black Rot</option>
-                            <option value="Alternaria">Alternaria</option>
-                            <option value="new">➕ Add New Disease</option>
-                        </select>
-                        
-                        <div id="new-disease-input" style="display: none;">
-                            <input type="text" id="new_disease_name" name="new_disease_name" placeholder="Enter new disease name..." oninput="handleDiseaseNameInput()">
-                        </div>
-                        
-                        <!-- Step 2.5: Treatment (Conditional - appears after disease is entered) -->
-                        <div id="step-treatment" class="workflow-step" style="display: none; margin-top: 15px; background: #fff3cd; border-color: #ffc107;">
-                            <h4 style="color: #856404;"><span class="step-number" style="background: #ffc107; color: #856404;">💊</span> Treatment</h4>
-                            <p style="font-size: 0.9rem; color: #666; margin: 10px 0;">Enter treatment for this disease:</p>
-                            <textarea id="treatment" name="treatment" rows="4" placeholder="Enter treatment instructions, remedies, or recommendations for this disease..." style="width: 100%; padding: 12px; border: 2px solid #ffc107; border-radius: 8px; font-size: 1rem; font-family: inherit; resize: vertical;"></textarea>
-                            <p style="font-size: 0.85rem; color: #856404; margin-top: 8px; font-style: italic;">
-                                <i class="fas fa-info-circle"></i> This treatment will be saved with the disease data and can be used for recommendations.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: Upload Images -->
-                    <div class="workflow-step">
-                        <h4><span class="step-number">3️⃣</span> Upload Images</h4>
-                        <div class="upload-area" onclick="document.getElementById('dataset_files').click()">
-                            <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #2e7d32; margin-bottom: 15px;"></i>
-                            <p style="margin: 10px 0; font-size: 1.1rem; font-weight: 600; color: #1b5e20;">📤 Upload Images</p>
-                            <p style="font-size: 0.9rem; color: #666; margin: 5px 0;">✔ Upload multiple images at once</p>
-                            <p style="font-size: 0.9rem; color: #666; margin: 5px 0;">✔ Images save immediately to database</p>
-                            <p style="font-size: 0.9rem; color: #666; margin: 5px 0;">✔ Keep uploading until you click "Complete Upload"</p>
-                            <input type="file" id="dataset_files" name="files" multiple accept="image/*" style="display: none;" onchange="handleFileSelectAndUpload(this)">
-                            <div id="file-preview" style="font-size: 0.95rem; color: #2e7d32; font-weight: 600; margin-top: 15px;"></div>
-                            <div id="upload-status" style="margin-top: 15px;"></div>
-                        </div>
-                        <div id="uploaded-files-list" style="margin-top: 20px; display: none;">
-                            <h5 style="color: #2e7d32; margin-bottom: 10px;">✅ Uploaded Images:</h5>
-                            <div id="uploaded-files" style="max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;"></div>
-                        </div>
-                    </div>
-
-                    <!-- Step 4: Info about Auto Labeling -->
-                    <div class="workflow-step" style="background: #e8f5e8; border-color: #2e7d32;">
-                        <h4 style="color: #2e7d32;"><span class="step-number" style="background: #2e7d32;">4️⃣</span> Auto Labeling (Behind the Button)</h4>
-                        <p style="font-size: 0.9rem; margin: 10px 0; color: #555; line-height: 1.6;">
-                            <strong>When uploading:</strong><br>
-                            • Images are automatically labeled as: <strong>Healthy</strong> or <strong>Diseased → Disease Name</strong><br>
-                            • Labels are prepared for YOLO training<br>
-                            • Feature embeddings are generated (like face recognition)<br>
-                            • Data is saved to the database
-                        </p>
-                    </div>
-
-                    <!-- Step 5: Complete Upload -->
-                    <button type="submit" id="complete-upload-btn" style="width: 100%; font-size: 1.2rem; padding: 18px; background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); margin-top: 20px;">
-                        <i class="fas fa-check-circle"></i> ✅ Complete Upload & Start Training
-                    </button>
-                    <p style="font-size: 0.85rem; color: #666; margin-top: 10px; text-align: center;">
-                        <strong>What this button does:</strong><br>
-                        Triggers YOLO training • Generates embeddings • Updates dataset • Makes data ready for scanning
-                    </p>
-
-                </form>
-            </div>
-        </div>
-
-        <!-- Stats / List -->
-        <div class="card">
-            <h3><i class="fas fa-list"></i> Custom Training Data</h3>
-            <div style="max-height: 500px; overflow-y: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Image</th>
-                            <th>Label</th>
-                            <th>Added On</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if dataset_images %}
-                            {% for img in dataset_images %}
-                            <tr>
-                                <td>
-                                    <img src="{{ img.image_url if img.image_url else url_for('static', filename='Dataset/UserUploads/' + img.label + '/' + img.filename) }}" 
-                                         alt="{{ img.label }}" 
-                                         style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;"
-                                         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect fill=%22%23eee%22 width=%2250%22 height=%2250%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2212%22%3ENo Image%3C/text%3E%3C/svg%3E'">
-                                </td>
-                                <td>
-                                    <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-size: 0.9rem; font-weight: 600;">
-                                        {{ img.label }}
-                                    </span>
-                                </td>
-                                <td style="color: #666; font-size: 0.9rem;">{{ img.created_at[:10] if img.created_at else 'Recent' }}</td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="3" style="text-align: center; color: #666; padding: 40px;">No custom data yet. Start by creating a dataset above!</td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+      <div class="card">
+        <h1>Feature Disabled</h1>
+        <p>This feature has been disabled.</p>
       </div>
-
     </div>
   </div>
 

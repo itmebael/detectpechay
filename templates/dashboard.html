@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pechay Leaf Detection Dashboard</title>
+  <title>AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</title>
   <style>
     body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f8f4; }
     .sidebar { 
@@ -598,7 +598,6 @@
   <div class="sidebar">
     <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pechay System Logo" class="logo">
     <a href="{{ url_for('dashboard', page='dashboard') }}" class="{{ 'active' if page=='dashboard' else '' }}">📊 Dashboard</a>
-    <a href="{{ url_for('dataset_manager') }}" class="{{ 'active' if request.endpoint == 'dataset_manager' else '' }}">➕ Create Dataset</a>
     <a href="{{ url_for('dashboard', page='upload') }}" class="{{ 'active' if page=='upload' else '' }}">📸 Scan Leaf</a>
     <a href="{{ url_for('dashboard', page='results') }}" class="{{ 'active' if page=='results' else '' }}">📝 Results</a>
     <a href="{{ url_for('dashboard', page='analytics') }}" class="{{ 'active' if page=='analytics' else '' }}">📈 Analytics</a>
@@ -606,7 +605,7 @@
   </div>
 
   <div class="main">
-    <div class="header">Pechay Leaf Detection Dashboard</div>
+    <div class="header">AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</div>
     <div class="scanning-overlay" id="scanningOverlay">
       <div class="scanning-box">
         <div class="scanning-header">
@@ -691,7 +690,7 @@
             <h3 style="color: #2e7d32; text-align: center;">📄 Generate Report</h3>
             <p style="text-align: center;">Customize and download a printable report of your detection history.</p>
             
-            <form action="{{ url_for('report') }}" method="GET" target="_blank" style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(15px); padding: 25px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+            <form action="{{ url_for('report') }}" method="GET" style="max-width: 600px; margin: 0 auto; background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(15px); padding: 25px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #052e16;">Condition:</label>
                     <select name="condition" style="width: 100%; padding: 12px; border: 1px solid rgba(5, 46, 22, 0.3); border-radius: 8px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); color: #052e16; font-weight: 500;">
@@ -825,36 +824,96 @@
       <!-- ESP32-CAM Live Stream Section - MUST BE VISIBLE -->
       <div class="camera-section" id="esp32CameraSection">
         <h2>📹 ESP32-CAM Live View</h2>
-        <p style="color: #666; margin-bottom: 15px; text-align: center; font-size: 1rem;">Connect to your ESP32-CAM to view live feed</p>
         <div id="streamStatus" class="stream-status">
           Enter ESP32-CAM IP address and click "Start Stream" or "Start Polling"
         </div>
-        <div class="camera-controls">
+        
+        <div class="camera-controls" style="margin-bottom: 20px;">
           <input type="text" id="cameraIP" placeholder="ESP32-CAM IP (e.g., 192.168.1.100)" value="" onkeypress="if(event.key==='Enter') startStream()">
           <button type="button" onclick="startStream()" style="background: #2e7d32;">▶️ Start Stream</button>
-          <button type="button" onclick="startPolling()" style="background: #17a2b8;">🔄 Start Polling</button>
           <button type="button" onclick="stopStream()" style="background: #dc3545;">⏹️ Stop</button>
-          <button type="button" onclick="testConnection()" style="background: #6c757d;">🔍 Test</button>
         </div>
-        <div id="cameraViewContainer">
-          <img id="cameraStream" src="" alt="Camera stream will appear here" style="display: none;">
-          <iframe id="cameraStreamFrame" src="" style="display: none; width: 100%; height: 100%; min-height: 200px; border: none; border-radius: 8px;"></iframe>
-          <canvas id="captureCanvas" style="display: none;"></canvas>
-          <div id="streamPlaceholder" style="color: #999; text-align: center; padding: 40px; width: 100%;">
-            <div style="font-size: 4rem; margin-bottom: 20px;">📷</div>
-            <div style="font-size: 1.3rem; margin-bottom: 15px; color: #fff;">Camera Live View</div>
-            <div style="color: #aaa; margin-bottom: 10px;">Enter ESP32-CAM IP address above</div>
-            <small style="color: #888;">Click "Start Polling" or "Start Stream" to begin</small>
-          </div>
-        </div>
-        <div class="camera-controls" style="margin-top: 15px; justify-content: center;">
-          <button type="button" onclick="captureFromStream()" id="captureBtn" disabled style="background: #28a745; padding: 12px 30px; font-size: 1rem; font-weight: bold;">📸 Capture & Detect Leaf Condition</button>
+
+        <div class="live-view-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+            <!-- Left Column: Camera View -->
+            <div class="camera-view-column">
+                <div id="cameraViewContainer" style="position: relative; width: 100%; min-height: 480px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid #2e7d32;">
+                    <img id="cameraStream" src="" alt="Camera stream" style="display: none; max-width: 100%; max-height: 100%; object-fit: contain;" crossorigin="anonymous">
+                    <iframe id="cameraStreamFrame" src="" style="display: none; width: 100%; height: 100%; border: none;"></iframe>
+                    <canvas id="overlayCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: none;"></canvas>
+                    <canvas id="captureCanvas" style="display: none;"></canvas>
+                    
+                    <div id="streamPlaceholder" style="color: #999; text-align: center; padding: 40px;">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">📷</div>
+                        <div style="font-size: 1.3rem; margin-bottom: 15px; color: #fff;">Camera Live View</div>
+                        <div style="color: #aaa; margin-bottom: 10px;">Enter ESP32-CAM IP address above</div>
+                        <small style="color: #888;">Click "Start Polling" or "Start Stream" to begin</small>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Controls & Info -->
+            <div class="controls-column" style="background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: fit-content;">
+                
+                <div class="control-group" style="margin-bottom: 20px;">
+                    <label style="display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600; color: #333;">
+                        Confidence Threshold: <span id="confValue" style="color: #6f42c1;">30%</span>
+                    </label>
+                    <input type="range" id="confThreshold" min="0" max="100" value="30" style="width: 100%; accent-color: #6f42c1; cursor: pointer;" oninput="document.getElementById('confValue').textContent = this.value + '%'">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; margin-top: 4px;">
+                        <span>0%</span><span>100%</span>
+                    </div>
+                </div>
+
+                <div class="control-group" style="margin-bottom: 20px;">
+                    <label style="display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600; color: #333;">
+                        Overlap Threshold: <span id="overlapValue" style="color: #6f42c1;">50%</span>
+                    </label>
+                    <input type="range" id="overlapThreshold" min="0" max="100" value="50" style="width: 100%; accent-color: #6f42c1; cursor: pointer;" oninput="document.getElementById('overlapValue').textContent = this.value + '%'">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; margin-top: 4px;">
+                        <span>0%</span><span>100%</span>
+                    </div>
+                </div>
+
+                 <div class="control-group" style="margin-bottom: 20px;">
+                    <label style="display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600; color: #333;">
+                        Opacity Threshold: <span id="opacityValue" style="color: #6f42c1;">75%</span>
+                    </label>
+                    <input type="range" id="opacityThreshold" min="0" max="100" value="75" style="width: 100%; accent-color: #6f42c1; cursor: pointer;" oninput="document.getElementById('opacityValue').textContent = this.value + '%'">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; margin-top: 4px;">
+                        <span>0%</span><span>100%</span>
+                    </div>
+                </div>
+
+                <div class="control-group" style="margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Label Display Mode:</label>
+                    <select id="labelMode" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; background-color: #f8f9fa; cursor: pointer;">
+                        <option value="conf">Draw Confidence</option>
+                        <option value="label">Label Only</option>
+                        <option value="none">None</option>
+                    </select>
+                </div>
+
+                <!-- JSON Output -->
+                <div class="json-output">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="font-weight: 600; color: #333;">Detection Output:</label>
+                        <button onclick="copyJson()" style="background: none; border: none; color: #6f42c1; cursor: pointer; font-weight: bold; font-size: 0.9rem; display: flex; align-items: center; gap: 4px;">
+                            Copy 📋
+                        </button>
+                    </div>
+                    <pre id="jsonOutput" style="background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #eee; height: 200px; overflow-y: auto; font-size: 0.8rem; color: #333; font-family: monospace; white-space: pre-wrap; margin: 0;">{
+  "predictions": []
+}</pre>
+                </div>
+            </div>
         </div>
       </div>
       
       <div class="card upload-page" style="margin-top: 30px;">
         <h1>📸 Scan Petchay Leaf</h1>
-        <p>Upload a pechay leaf image (from ESP32-CAM or computer) to detect disease condition.</p>
+        <p>Upload a pechay leaf image to detect disease condition.</p>
         {% with messages = get_flashed_messages() %}
           {% if messages %}
             {% for m in messages %}<div class="status-message">{{ m }}</div>{% endfor %}
@@ -1082,79 +1141,7 @@
       {% elif page == 'dataset' %}
       <div class="card upload-page">
         <h1>📂 Dataset Management</h1>
-        <p>Manage training images for the PechayCNN model.</p>
-        
-        <!-- Stats -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number">{{ dataset_stats.total_images }}</div>
-                <div class="stat-label">Total Images</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ dataset_stats.healthy_count }}</div>
-                <div class="stat-label">Healthy Samples</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">{{ dataset_stats.diseased_count }}</div>
-                <div class="stat-label">Diseased Samples</div>
-            </div>
-        </div>
-
-        <!-- Upload Form -->
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e0e0e0; margin-bottom: 30px;">
-            <h3 style="color: #2e7d32; margin-top: 0;">📤 Upload to Dataset</h3>
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="upload_dataset">
-                
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Select Label:</label>
-                    <select name="dataset_label" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-                        <option value="Healthy">Healthy</option>
-                        <option value="Diseased">Diseased</option>
-                    </select>
-                </div>
-                
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Select Images:</label>
-                    <input type="file" name="dataset_files" multiple accept="image/*" required>
-                    <small style="color: #666;">You can select multiple files</small>
-                </div>
-                
-                <button type="submit">Upload to Dataset</button>
-            </form>
-            {% if upload_status %}
-            <div class="status-message" style="margin-top: 15px;">{{ upload_status }}</div>
-            {% endif %}
-        </div>
-
-        <!-- Dataset Filter -->
-        <div style="margin-bottom: 20px;">
-            <span style="font-weight: bold; margin-right: 10px;">Filter by Label:</span>
-            <a href="{{ url_for('dashboard', page='dataset') }}" class="date-filter-btn {{ 'active' if not request.args.get('label') else '' }}">All</a>
-            <a href="{{ url_for('dashboard', page='dataset', label='Healthy') }}" class="date-filter-btn {{ 'active' if request.args.get('label') == 'Healthy' else '' }}">Healthy</a>
-            <a href="{{ url_for('dashboard', page='dataset', label='Diseased') }}" class="date-filter-btn {{ 'active' if request.args.get('label') == 'Diseased' else '' }}">Diseased</a>
-        </div>
-
-        <!-- Image Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px;">
-            {% for img in dataset_images %}
-            <div style="background: #fff; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <img src="{{ url_for('uploaded_file', filename='dataset/' + img.label + '/' + img.filename) }}" 
-                     alt="{{ img.label }}" 
-                     style="width: 100%; height: 120px; object-fit: cover;"
-                     onclick="window.open(this.src, '_blank')"
-                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22120%22%3E%3Crect fill=%22%23eee%22 width=%22150%22 height=%22120%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23aaa%22%3ENo Image%3C/text%3E%3C/svg%3E'">
-                <div style="padding: 8px;">
-                    <div class="{{ 'text-healthy' if img.label == 'Healthy' else 'text-diseased' }}">{{ img.label }}</div>
-                    <div style="font-size: 0.7rem; color: #888; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">{{ img.filename }}</div>
-                </div>
-            </div>
-            {% else %}
-            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #888;">
-                No images found in dataset. Upload some images to get started.
-            </div>
-            {% endfor %}
-        </div>
+        <p>This feature has been disabled.</p>
       </div>
       {% elif page == 'settings' %}
       <div class="card upload-page">
@@ -1354,6 +1341,7 @@
     });
 
     let streamInterval = null;
+    let autoDetectInterval = null;
     let cameraStreamImg = null;
     
     window.addEventListener('DOMContentLoaded', function() {
@@ -1392,7 +1380,10 @@
         alert('Camera IP input not found!');
         return;
       }
-      const ipValue = cameraIP.value.trim();
+      // Clean up IP input (remove http://, https://, and trailing slashes)
+      let ipValue = cameraIP.value.trim();
+      ipValue = ipValue.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+      
       const statusDiv = document.getElementById('streamStatus');
       const streamImg = document.getElementById('cameraStream');
       const captureBtn = document.getElementById('captureBtn');
@@ -1413,6 +1404,8 @@
       streamImg.style.display = 'block';
       streamImg.style.width = '100%';
       streamImg.style.height = 'auto';
+      // Enable CORS for canvas operations
+      streamImg.crossOrigin = 'anonymous';
       cameraStreamImg = streamImg;
       
       if (statusDiv) {
@@ -1426,23 +1419,291 @@
       streamImg.onload = function() {
         if (statusDiv) {
           statusDiv.className = 'stream-status connected';
-          statusDiv.textContent = '✓ Stream connected successfully!';
+          statusDiv.textContent = '✓ Stream connected successfully! Auto-detection starting...';
         }
         if (captureBtn) captureBtn.disabled = false;
         if (placeholder) placeholder.style.display = 'none';
+        
+        // Start auto-detection immediately
+        startAutoDetect();
       };
       
       streamImg.onerror = function() {
         if (statusDiv) {
           statusDiv.className = 'stream-status error';
-          statusDiv.textContent = '✗ Failed to connect. Check IP address and ensure ESP32-CAM is streaming.';
+          statusDiv.textContent = '✗ Failed to connect to ' + streamUrl + '. Check IP address and ensure ESP32-CAM is streaming.';
         }
+        console.error('Stream load error for:', streamUrl);
         streamImg.style.display = 'none';
         if (captureBtn) captureBtn.disabled = true;
         if (placeholder) placeholder.style.display = 'block';
       };
     }
     
+    function startAutoDetect() {
+      // Ensure stream is running
+      // Note: We removed explicit startPolling call to avoid conflict with startStream
+      // The processAutoDetect function handles both stream and polled images
+      
+      const statusDiv = document.getElementById('streamStatus');
+      const overlayCanvas = document.getElementById('overlayCanvas');
+      if (statusDiv) {
+        statusDiv.textContent = '🤖 Auto-Detection Active - Scanning...';
+        statusDiv.className = 'stream-status connected';
+      }
+      if (overlayCanvas) {
+        overlayCanvas.style.display = 'block';
+      }
+      
+      // Stop existing auto-detect if any
+      if (autoDetectInterval) clearInterval(autoDetectInterval);
+
+      // Check every 1.5 seconds for near real-time feel
+      autoDetectInterval = setInterval(processAutoDetect, 1500); 
+    }
+
+    function copyJson() {
+      const jsonText = document.getElementById('jsonOutput').textContent;
+      navigator.clipboard.writeText(jsonText).then(() => {
+        const btn = document.querySelector('button[onclick="copyJson()"]');
+        if(btn) {
+           const originalText = btn.innerHTML;
+           btn.innerHTML = 'Copied! ✅';
+           setTimeout(() => btn.innerHTML = originalText, 2000);
+        }
+      });
+    }
+
+    // Intersection over Union (IoU) Calculation
+    function calculateIoU(boxA, boxB) {
+      // Box format in predictions is center x, y and width, height
+      // Convert to top-left (x1, y1) and bottom-right (x2, y2)
+      const boxA_x1 = boxA.x - (boxA.width / 2);
+      const boxA_y1 = boxA.y - (boxA.height / 2);
+      const boxA_x2 = boxA.x + (boxA.width / 2);
+      const boxA_y2 = boxA.y + (boxA.height / 2);
+
+      const boxB_x1 = boxB.x - (boxB.width / 2);
+      const boxB_y1 = boxB.y - (boxB.height / 2);
+      const boxB_x2 = boxB.x + (boxB.width / 2);
+      const boxB_y2 = boxB.y + (boxB.height / 2);
+
+      // Determine the coordinates of the intersection rectangle
+      const xA = Math.max(boxA_x1, boxB_x1);
+      const yA = Math.max(boxA_y1, boxB_y1);
+      const xB = Math.min(boxA_x2, boxB_x2);
+      const yB = Math.min(boxA_y2, boxB_y2);
+
+      // Compute the area of intersection
+      const interWidth = Math.max(0, xB - xA);
+      const interHeight = Math.max(0, yB - yA);
+      const interArea = interWidth * interHeight;
+
+      // Compute the area of both rectangles
+      const boxAArea = boxA.width * boxA.height;
+      const boxBArea = boxB.width * boxB.height;
+
+      // Compute the intersection over union
+      const iou = interArea / (boxAArea + boxBArea - interArea);
+      return iou;
+    }
+
+    // Non-Maximum Suppression (NMS)
+    function applyNMS(predictions, iouThreshold) {
+      if (!predictions || predictions.length === 0) return [];
+
+      // Sort by confidence descending
+      predictions.sort((a, b) => b.confidence - a.confidence);
+
+      const keep = [];
+      const flags = new Array(predictions.length).fill(true);
+
+      for (let i = 0; i < predictions.length; i++) {
+        if (!flags[i]) continue;
+
+        keep.push(predictions[i]);
+
+        for (let j = i + 1; j < predictions.length; j++) {
+          if (!flags[j]) continue;
+
+          if (calculateIoU(predictions[i], predictions[j]) > iouThreshold) {
+            flags[j] = false;
+          }
+        }
+      }
+      return keep;
+    }
+
+    function processAutoDetect() {
+      const streamImg = document.getElementById('cameraStream');
+      const canvas = document.getElementById('captureCanvas');
+      const overlayCanvas = document.getElementById('overlayCanvas');
+      
+      // Controls
+      const confSlider = document.getElementById('confThreshold');
+      const overlapSlider = document.getElementById('overlapThreshold');
+      const opacitySlider = document.getElementById('opacityThreshold');
+      const labelModeSelect = document.getElementById('labelMode');
+      const jsonOutput = document.getElementById('jsonOutput');
+      
+      const confThreshold = confSlider ? parseInt(confSlider.value) / 100 : 0.3;
+      const overlapThreshold = overlapSlider ? parseInt(overlapSlider.value) / 100 : 0.5;
+      const opacityThreshold = opacitySlider ? parseInt(opacitySlider.value) / 100 : 0.75;
+      const labelMode = labelModeSelect ? labelModeSelect.value : 'conf';
+      
+      if (!streamImg || !streamImg.src || streamImg.style.display === 'none') return;
+      
+      try {
+        canvas.width = streamImg.naturalWidth || 640;
+        canvas.height = streamImg.naturalHeight || 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(streamImg, 0, 0, canvas.width, canvas.height);
+        
+        // Setup overlay canvas to match stream dimensions
+        if (overlayCanvas) {
+            overlayCanvas.width = canvas.width;
+            overlayCanvas.height = canvas.height;
+            const ctxOverlay = overlayCanvas.getContext('2d');
+            ctxOverlay.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+        
+        const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+        
+        const statusDiv = document.getElementById('streamStatus');
+        
+        fetch('/api/detect_live', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: dataURL })
+        })
+        .then(res => res.json())
+        .then(data => {
+            // Update JSON Output
+            if (jsonOutput && data.result) {
+                if (data.result.predictions) {
+                    jsonOutput.textContent = JSON.stringify({ predictions: data.result.predictions }, null, 2);
+                } else if (data.result.condition === 'Not Pechay') {
+                     jsonOutput.textContent = JSON.stringify({ 
+                         condition: 'Not Pechay',
+                         reason: data.result.recommendations ? data.result.recommendations.tips : 'Validation failed'
+                     }, null, 2);
+                }
+            }
+            
+            // Show status if blocked
+            if (data.result && data.result.condition === 'Not Pechay') {
+                 if (statusDiv) {
+                     // Get the specific reason if available
+                     let reason = 'Not a Pechay Leaf';
+                     if (data.result.recommendations && data.result.recommendations.tips && data.result.recommendations.tips.length > 0) {
+                         reason = data.result.recommendations.tips[0];
+                     }
+                     statusDiv.textContent = '⛔ Blocked: ' + reason;
+                     statusDiv.className = 'stream-status error';
+                 }
+                 // Clear overlay if blocked
+                 if (overlayCanvas) {
+                     const ctxOverlay = overlayCanvas.getContext('2d');
+                     ctxOverlay.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                 }
+                 return; // Stop processing predictions
+            } else if (statusDiv && statusDiv.textContent.includes('⛔')) {
+                 statusDiv.textContent = '🤖 Auto-Detection Active - Scanning...';
+                 statusDiv.className = 'stream-status connected';
+            }
+
+            // Draw Bounding Boxes if overlay canvas exists
+            if (overlayCanvas && data.result && data.result.predictions) {
+                const ctxOverlay = overlayCanvas.getContext('2d');
+                ctxOverlay.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Clear previous
+                
+                // Filter by confidence first
+                let predictions = data.result.predictions.filter(p => p.confidence >= confThreshold);
+                
+                // Apply NMS (Overlap Threshold)
+                predictions = applyNMS(predictions, overlapThreshold);
+                
+                predictions.forEach(pred => {
+                    const x = pred.x - (pred.width / 2); // Center x to top-left x
+                    const y = pred.y - (pred.height / 2); // Center y to top-left y
+                    const width = pred.width;
+                    const height = pred.height;
+                    const label = pred.class;
+                    const confidence = (pred.confidence * 100).toFixed(1);
+                    
+                    // Determine color based on class
+                    let color = '#00FF00'; // Default green
+                    if (label.toLowerCase().includes('healthy')) {
+                        color = '#00FF00'; // Green
+                    } else if (label.toLowerCase().includes('disease') || label.toLowerCase().includes('rot') || label.toLowerCase().includes('spot')) {
+                        color = '#FF0000'; // Red
+                    }
+                    
+                    // Draw Box
+                    ctxOverlay.beginPath();
+                    ctxOverlay.lineWidth = 4;
+                    ctxOverlay.strokeStyle = color;
+                    ctxOverlay.globalAlpha = opacityThreshold;
+                    ctxOverlay.rect(x, y, width, height);
+                    ctxOverlay.stroke();
+                    ctxOverlay.globalAlpha = 1.0; // Reset alpha
+                    
+                    if (labelMode !== 'none') {
+                        // Draw Background for Label
+                        ctxOverlay.fillStyle = color;
+                        let text = label;
+                        if (labelMode === 'conf') {
+                            text += ` ${confidence}%`;
+                        }
+                        
+                        const font = "bold 18px Arial";
+                        ctxOverlay.font = font;
+                        const textWidth = ctxOverlay.measureText(text).width;
+                        const textHeight = 25;
+                        
+                        // Ensure label doesn't go off top
+                        let labelY = y - textHeight;
+                        if (labelY < 0) labelY = y;
+                        
+                        ctxOverlay.globalAlpha = opacityThreshold;
+                        ctxOverlay.fillRect(x, labelY, textWidth + 10, textHeight);
+                        ctxOverlay.globalAlpha = 1.0;
+                        
+                        // Draw Label Text
+                        ctxOverlay.fillStyle = "#FFFFFF";
+                        ctxOverlay.fillText(text, x + 5, labelY + 18);
+                    }
+                });
+            }
+
+            if (data.saved) {
+                console.log('Auto-detected and saved:', data.result);
+                if (statusDiv) {
+                    statusDiv.innerHTML = `✅ <strong>Saved:</strong> ${data.result.condition} (${(data.result.confidence).toFixed(1)}%)`;
+                    // Visual feedback
+                    statusDiv.className = 'stream-status connected';
+                    statusDiv.style.background = '#d1e7dd';
+                    setTimeout(() => {
+                        if (autoDetectInterval) {
+                           // Keep the status text but reset background
+                           statusDiv.style.background = '';
+                        }
+                    }, 2000);
+                }
+            } else if (data.result) {
+                 if (statusDiv) {
+                    // Just show status if not saved
+                    statusDiv.innerHTML = `Scanning... Last: ${data.result.condition} (${(data.result.confidence || 0).toFixed(1)}%)`;
+                }
+            }
+        })
+        .catch(err => console.error('Auto-detect error:', err));
+        
+      } catch (e) {
+        console.error('Auto-detect canvas error:', e);
+      }
+    }
+
     function startPolling() {
       console.log('startPolling() called');
       const cameraIP = document.getElementById('cameraIP');
@@ -1450,7 +1711,10 @@
         alert('Camera IP input not found!');
         return;
       }
-      const ipValue = cameraIP.value.trim();
+      // Clean up IP input
+      let ipValue = cameraIP.value.trim();
+      ipValue = ipValue.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+      
       const statusDiv = document.getElementById('streamStatus');
       const streamImg = document.getElementById('cameraStream');
       const captureBtn = document.getElementById('captureBtn');
@@ -1471,6 +1735,8 @@
       streamImg.style.display = 'block';
       streamImg.style.width = '100%';
       streamImg.style.height = 'auto';
+      // Enable CORS
+      streamImg.crossOrigin = 'anonymous';
       cameraStreamImg = streamImg;
       
       if (statusDiv) {
@@ -1499,6 +1765,7 @@
           statusDiv.className = 'stream-status error';
           statusDiv.textContent = '✗ Failed to connect. Check IP address and ensure ESP32-CAM is running.';
         }
+        console.error('Polling error for:', captureUrl);
         stopStream();
       };
     }
@@ -1509,10 +1776,15 @@
       const statusDiv = document.getElementById('streamStatus');
       const captureBtn = document.getElementById('captureBtn');
       const placeholder = document.getElementById('streamPlaceholder');
+      const overlayCanvas = document.getElementById('overlayCanvas');
       
       if (streamInterval) {
         clearInterval(streamInterval);
         streamInterval = null;
+      }
+      if (autoDetectInterval) {
+        clearInterval(autoDetectInterval);
+        autoDetectInterval = null;
       }
       
       if (streamImg) {
@@ -1522,6 +1794,9 @@
       if (streamFrame) {
         streamFrame.src = '';
         streamFrame.style.display = 'none';
+      }
+      if (overlayCanvas) {
+        overlayCanvas.style.display = 'none';
       }
       if (statusDiv) {
         statusDiv.className = 'stream-status';
@@ -1535,7 +1810,11 @@
     function testConnection() {
       const cameraIP = document.getElementById('cameraIP');
       if (!cameraIP) return;
-      const ipValue = cameraIP.value.trim();
+      
+      // Clean up IP input
+      let ipValue = cameraIP.value.trim();
+      ipValue = ipValue.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+      
       const statusDiv = document.getElementById('streamStatus');
       
       if (!ipValue) {
@@ -1553,6 +1832,8 @@
       
       const testUrl = 'http://' + ipValue + '/capture';
       const img = new Image();
+      // Enable CORS for consistency
+      img.crossOrigin = 'anonymous';
       
       img.onload = function() {
         if (statusDiv) {
@@ -1566,6 +1847,7 @@
           statusDiv.className = 'stream-status error';
           statusDiv.textContent = '✗ Cannot reach camera at ' + ipValue + '. Check:\n- ESP32-CAM is powered on\n- Both devices are on same network\n- IP address is correct';
         }
+        console.error('Connection test failed for:', testUrl);
       };
       
       const timestamp = new Date().getTime();

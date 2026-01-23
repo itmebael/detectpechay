@@ -36,10 +36,8 @@ except ImportError:
     FACE_RECOGNITION_AVAILABLE = False
     print("Warning: face_recognition not available. Install with: pip install face-recognition")
 
-ENABLE_HEAVY_VALIDATION = os.getenv("ENABLE_HEAVY_VALIDATION", "0") == "1"
-if not ENABLE_HEAVY_VALIDATION:
-    YOLO_AVAILABLE = False
-    FACE_RECOGNITION_AVAILABLE = False
+# Enable validation if packages are available
+# ENABLE_HEAVY_VALIDATION flag removed to ensure validation always runs if packages are present
 
 class DetectionService:
     """Service for detecting leaf diseases using Roboflow API"""
@@ -63,6 +61,16 @@ class DetectionService:
             except Exception as e:
                 print(f"⚠ Failed to initialize InferenceHTTPClient: {e}")
                 self.inference_client = None
+        
+        # Initialize YOLO model if available
+        self.yolo_model = None
+        if YOLO_AVAILABLE:
+            try:
+                print("Loading YOLOv8n model for object detection...")
+                self.yolo_model = YOLO('yolov8n.pt')
+                print("✓ YOLOv8n model initialized")
+            except Exception as e:
+                print(f"⚠ Failed to initialize YOLO model: {e}")
     
     def detect_leaf(self, image_path: str) -> Dict:
         """
@@ -189,12 +197,17 @@ class DetectionService:
                                 # If api_key not in payload, add to URL
                                 url_with_key = f"{test_url}?api_key={self.api_key}" if "api_key" not in payload else test_url
                                 
+                                # Add confidence threshold of 30%
+                                params = {"api_key": self.api_key} if "api_key" not in payload else {}
+                                params["confidence"] = 0.3
+                                params["overlap"] = 0.5
+                                
                                 try:
                                     response = requests.post(
                                         url_with_key,
                                         json=payload if "api_key" in payload else payload,
                                         headers={"Content-Type": "application/json"},
-                                        params={"api_key": self.api_key} if "api_key" not in payload else None,
+                                        params=params,
                                         timeout=30
                                     )
                                     
@@ -409,6 +422,31 @@ class DetectionService:
             print(f"\n=== Extracting Prediction Data ===")
             print(f"predictions variable: type={type(predictions)}, is_list={isinstance(predictions, list)}, len={len(predictions) if isinstance(predictions, (list, dict)) else 'N/A'}")
             
+            # --- STEM FILTERING: Block objects with high aspect ratio (thin/long) ---
+            if predictions:
+                stem_threshold = 3.0  # Aspect ratio threshold (Length is 3x Width)
+                
+                def is_stem(p):
+                    if not isinstance(p, dict): return False
+                    w = float(p.get('width', 0))
+                    h = float(p.get('height', 0))
+                    if w > 0 and h > 0:
+                        ratio = max(w, h) / min(w, h)
+                        if ratio > stem_threshold:
+                            print(f"  ⚠️ Detected stem-like object (blocked): Ratio {ratio:.2f}, Class: {p.get('class')}")
+                            return True
+                    return False
+
+                if isinstance(predictions, list):
+                    original_count = len(predictions)
+                    predictions = [p for p in predictions if not is_stem(p)]
+                    if len(predictions) < original_count:
+                        print(f"  ✓ Filtered {original_count - len(predictions)} stem-like objects")
+                elif isinstance(predictions, dict):
+                    if is_stem(predictions):
+                        print(f"  ✓ Filtered single stem-like prediction")
+                        predictions = [] # Empty list implies no valid predictions
+
             if predictions:
                 if isinstance(predictions, list) and len(predictions) > 0:
                     print(f"  ✓ predictions is a list with {len(predictions)} items")
@@ -646,6 +684,22 @@ class DetectionService:
             print(f"  Confidence: {confidence * 100:.1f}%")
             print(f"  Treatment: {recommendations.get('action', '')[:100]}...")
             
+            # Ensure predictions is a list of dicts for frontend visualization
+            formatted_predictions = []
+            if predictions and isinstance(predictions, list):
+                for p in predictions:
+                    if isinstance(p, dict):
+                        # Normalize keys for frontend (x, y, width, height, class, confidence)
+                        formatted_p = {
+                            'x': p.get('x', 0),
+                            'y': p.get('y', 0),
+                            'width': p.get('width', 0),
+                            'height': p.get('height', 0),
+                            'class': p.get('class', p.get('label', 'Unknown')),
+                            'confidence': p.get('confidence', p.get('score', 0))
+                        }
+                        formatted_predictions.append(formatted_p)
+
             return {
                 'filename': filename,
                 'condition': condition,
@@ -653,7 +707,8 @@ class DetectionService:
                 'confidence': round(confidence * 100, 1) if confidence <= 1.0 else round(confidence, 1),
                 'probabilities': probabilities,
                 'recommendations': recommendations,
-                'treatment': recommendations.get('action', '')
+                'treatment': recommendations.get('action', ''),
+                'predictions': formatted_predictions
             }
             
         except Exception as e:
@@ -753,12 +808,15 @@ class DetectionService:
                 skin_percentage = skin_validation.get('skin_percentage', 0.0)
                 green_pct = green_validation.get('green_percentage', 0.0)
                 for err in validation_errors:
-                    if err == 'face_detected':
+                    # Only block on fundamental image issues (no green, wall)
+                    # We allow faces and YOLO-detected objects (like persons) so that 
+                    # if a person is holding a pechay, the system still attempts detection.
+                    if err in ['no_green_color', 'wall_background']:
                         critical_errors.append(err)
-                    elif err in ['no_green_color', 'wall_background']:
-                        critical_errors.append(err)
-                    elif err.startswith('yolo_'):
-                        critical_errors.append(err)
+                    
+                    # Note: We explicitly DO NOT add 'face_detected' or 'yolo_*' to critical_errors.
+                    # This allows the Roboflow API to check for a leaf even if a person is present.
+                
                 if critical_errors:
                     return {
                         'is_valid': False,
@@ -782,6 +840,48 @@ class DetectionService:
                 'message': 'Validation check failed, proceeding with detection'
             }
     
+    def _detect_stem(self, image: np.ndarray) -> Dict:
+        """Detect if the object is likely a stem (long, thin, green)"""
+        try:
+            # 1. Convert to HSV and mask green
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+            lower_green = np.array([35, 50, 50])
+            upper_green = np.array([85, 255, 255])
+            mask = cv2.inRange(hsv, lower_green, upper_green)
+            
+            # 2. Find contours
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            is_stem = False
+            max_aspect_ratio = 0.0
+            
+            if contours:
+                # Find largest green contour
+                largest_contour = max(contours, key=cv2.contourArea)
+                if cv2.contourArea(largest_contour) > 500: # Ignore small noise
+                    # 3. Fit a rotated rectangle
+                    rect = cv2.minAreaRect(largest_contour)
+                    (center), (width, height), angle = rect
+                    
+                    # Calculate aspect ratio (long side / short side)
+                    if width > 0 and height > 0:
+                        short_side = min(width, height)
+                        long_side = max(width, height)
+                        aspect_ratio = long_side / short_side
+                        max_aspect_ratio = aspect_ratio
+                        
+                        # Threshold: if length is > 3.5x width, likely a stem
+                        if aspect_ratio > 3.5:
+                            is_stem = True
+                            
+            return {
+                'is_stem': is_stem,
+                'aspect_ratio': max_aspect_ratio
+            }
+        except Exception as e:
+            print(f"Stem detection error: {e}")
+            return {'is_stem': False, 'aspect_ratio': 0.0}
+
     def _check_green_color(self, image: np.ndarray) -> Dict:
         """Check if image contains green colors (pechay leaves are green)"""
         try:
@@ -936,8 +1036,10 @@ class DetectionService:
         reasons = []
         
         try:
-            # Load YOLOv8n (nano) model for general object detection
-            model = YOLO('yolov8n.pt')  # Pre-trained COCO model
+            # Use initialized model or load new one
+            model = getattr(self, 'yolo_model', None)
+            if model is None:
+                model = YOLO('yolov8n.pt')
             
             # Run inference
             results = model(image_path)
