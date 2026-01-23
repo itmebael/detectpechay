@@ -1,16 +1,18 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify
+from flask_cors import CORS
 import os
 import sys
 from supabase import create_client, Client
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
-SUPABASE_URL = "https://zqkqmjlepigpwfykwzey.supabase.co"
-SUPABASE_KEY = "sb_publishable_HNgog4XZVoR6FqaKuzIcGQ_7yrDAjFn"
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://zqkqmjlepigpwfykwzey.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_ANON_KEY", os.environ.get("SUPABASE_KEY", "sb_publishable_HNgog4XZVoR6FqaKuzIcGQ_7yrDAjFn"))
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app = Flask(__name__)
+CORS(app)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here-change-in-production')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
