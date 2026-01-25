@@ -66,7 +66,7 @@ ROBOFLOW_AVAILABLE = True  # Always available - using HTTP requests
 class DetectionService:
     """Service for detecting leaf diseases using Roboflow API"""
     
-    def __init__(self):
+    def __init__(self, yolo_model=None):
         # Use serverless.roboflow.com for workflows
         self.api_url = "https://serverless.roboflow.com"
         self.api_key = "B7RL7B0aD47us70qgevM"
@@ -77,9 +77,10 @@ class DetectionService:
         self.inference_client = None
         self._inference_client_initialized = False
         
-        # Don't initialize YOLO model at startup - load lazily when needed
-        self.yolo_model = None
-        self._yolo_model_initialized = False
+        # Use shared YOLO model passed from app (loaded once at startup)
+        # If not provided, will lazy load when needed
+        self.yolo_model = yolo_model
+        self._yolo_model_initialized = yolo_model is not None
     
     def detect_leaf(self, image_path: str) -> Dict:
         """
@@ -1074,10 +1075,32 @@ class DetectionService:
             
             model = self.yolo_model
             if model is None:
+                # Fallback: try to lazy load if not provided
+                if not _check_yolo():
+                    return {'is_valid': True, 'errors': [], 'reasons': []}
+                try:
+                    from ultralytics import YOLO
+                    print("Loading YOLOv8n model for validation (fallback lazy load)...")
+                    self.yolo_model = YOLO('yolov8n.pt')
+                    self._yolo_model_initialized = True
+                    model = self.yolo_model
+                except Exception as e:
+                    print(f"⚠ Failed to load YOLO model: {e}")
+                    return {'is_valid': True, 'errors': [], 'reasons': []}
+            
+            if model is None:
                 return {'is_valid': True, 'errors': [], 'reasons': []}
             
-            # Run inference
-            results = model(image_path)
+            # Run inference with memory-efficient settings
+            # CRITICAL: Use small image size, CPU, no half precision to save memory
+            results = model(
+                image_path,
+                imgsz=320,      # Smaller image size (default is 640)
+                conf=0.4,       # Lower confidence threshold
+                device="cpu",   # Force CPU (no GPU on Render)
+                half=False,     # CRITICAL: Never use half=True on CPU
+                verbose=False   # Reduce output
+            )
             
             # COCO class names that are NOT leaves
             non_leaf_classes = [

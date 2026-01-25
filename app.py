@@ -1,6 +1,9 @@
+# CRITICAL: Disable FastSAM before any ultralytics imports to save memory
+import os
+os.environ["ULTRALYTICS_NO_FASTSAM"] = "1"
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, jsonify
 from flask_cors import CORS
-import os
 import sys
 from supabase import create_client, Client
 from datetime import datetime
@@ -28,6 +31,27 @@ if TRYCNN_REPO_PATH not in sys.path:
     sys.path.append(TRYCNN_REPO_PATH)
 
 _cnn_predictor = None
+_yolo_model = None  # Global YOLO model - loaded once at startup
+
+
+def get_yolo_model():
+    """Load YOLO model once at startup - shared across all requests"""
+    global _yolo_model
+    if _yolo_model is not None:
+        return _yolo_model
+    
+    try:
+        from ultralytics import YOLO
+        print("Loading YOLOv8n model (startup, shared instance)...")
+        # Use yolov8n.pt (nano) for minimal memory usage
+        _yolo_model = YOLO('yolov8n.pt')
+        print("✓ YOLOv8n model loaded successfully")
+        return _yolo_model
+    except Exception as e:
+        print(f"⚠ Failed to load YOLO model: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 def get_cnn_predictor():
@@ -47,6 +71,10 @@ def get_cnn_predictor():
     except Exception as e:
         print(f"Error loading CNN predictor: {e}")
         return None
+
+# Preload YOLO model at startup (shared instance)
+print("=== Preloading YOLO model at startup ===")
+get_yolo_model()
 
 @app.route('/')
 def index():
@@ -152,7 +180,9 @@ def detect_live():
         
         # Run detection
         from services.detection_service import DetectionService
-        detection_service = DetectionService()
+        # Pass shared YOLO model to avoid reloading
+        shared_yolo_model = get_yolo_model()
+        detection_service = DetectionService(yolo_model=shared_yolo_model)
         detection_result = detection_service.detect_leaf(filepath)
         
         # Check if we should save (Auto-capture logic)
