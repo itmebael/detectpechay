@@ -320,18 +320,30 @@ def dashboard():
     except:
         db_url_display = 'Configured'
     
-    return render_template('dashboard.html',
-                         page=page,
-                         dashboard_stats=dashboard_stats,
-                         results=results,
-                         analytics_data=analytics_data,
-                         detection_result=detection_result,
-                         upload_status=upload_status,
-                         filter_condition=filter_condition,
-                         filter_days=filter_days,
-                         date_range_text=date_range_text,
-                         db_url_display=db_url_display,
-                         current_user={'id': session.get('user_id'), 'email': session.get('user_email'), 'username': session.get('user')})
+    try:
+        current_user_data = {
+            'id': session.get('user_id'),
+            'email': session.get('user_email', ''),
+            'username': session.get('user', '')
+        }
+        
+        return render_template('dashboard.html',
+                             page=page,
+                             dashboard_stats=dashboard_stats,
+                             results=results,
+                             analytics_data=analytics_data,
+                             detection_result=detection_result,
+                             upload_status=upload_status,
+                             filter_condition=filter_condition,
+                             filter_days=filter_days,
+                             date_range_text=date_range_text,
+                             db_url_display=db_url_display,
+                             current_user=current_user_data)
+    except Exception as e:
+        print(f"Template rendering error: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Error rendering template: {str(e)}", 500
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
