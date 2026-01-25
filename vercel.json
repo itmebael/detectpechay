@@ -12,9 +12,15 @@
       "dest": "app.py"
     }
   ],
+  "functions": {
+    "app.py": {
+      "maxDuration": 60,
+      "memory": 3008
+    }
+  },
   "env": {
     "FLASK_ENV": "production",
     "ULTRALYTICS_NO_FASTSAM": "1"
-  }
+  },
+  "regions": ["iad1"]
 }
-

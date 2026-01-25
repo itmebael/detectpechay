@@ -259,8 +259,12 @@ def dashboard():
             file = request.files['leafImage']
             if file and file.filename:
                 try:
-                    # Ensure uploads directory exists
-                    uploads_dir = os.path.join('uploads')
+                    # For Vercel/serverless: use /tmp directory (writable)
+                    # For regular deployment: use uploads directory
+                    if os.path.exists('/tmp'):
+                        uploads_dir = '/tmp/uploads'
+                    else:
+                        uploads_dir = os.path.join('uploads')
                     os.makedirs(uploads_dir, exist_ok=True)
                     
                     # Save uploaded file
