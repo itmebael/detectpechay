@@ -24,14 +24,17 @@ _cnn_predictor = None
 
 
 def get_cnn_predictor():
+    """Lazy load CNN predictor to save memory - only load when actually needed"""
     global _cnn_predictor
     if _cnn_predictor is not None:
         return _cnn_predictor
     try:
+        # Only import when needed to save memory at startup
         from predict import PechayPredictor
         model_path = os.path.join(TRYCNN_REPO_PATH, "pechay_cnn_model_20251212_184656.pth")
         if not os.path.exists(model_path):
             return None
+        # Use CPU to save memory
         _cnn_predictor = PechayPredictor(model_path, device='cpu')
         return _cnn_predictor
     except Exception as e:
