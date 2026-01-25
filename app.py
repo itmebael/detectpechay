@@ -15,6 +15,12 @@ app = Flask(__name__)
 CORS(app)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'your-secret-key-here-change-in-production')
 
+# Configure session for production
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'  # Use secure cookies in production
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TRYCNN_REPO_PATH = os.path.join(BASE_DIR, "trycnn_repo")
 if TRYCNN_REPO_PATH not in sys.path:
@@ -81,6 +87,7 @@ def login():
                 # Check if password matches (plain text or hashed)
                 if stored_password == password or stored_password == password_hash:
                     # Login successful - set session
+                    session.permanent = True  # Make session permanent
                     session['user'] = user.get('username', username)
                     session['user_id'] = str(user.get('id'))  # Convert UUID to string
                     session['user_email'] = user.get('email', username)
