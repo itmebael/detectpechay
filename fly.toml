@@ -1,0 +1,41 @@
+# fly.toml app configuration file generated for detectpechay on 2026-01-25T17:00:00Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "detectpechay"
+primary_region = "iad"
+
+[build]
+
+[env]
+  PORT = "8080"
+  FLASK_ENV = "production"
+  PYTHON_VERSION = "3.11"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8080
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
