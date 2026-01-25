@@ -12,6 +12,7 @@ primary_region = "iad"
   PORT = "8080"
   FLASK_ENV = "production"
   PYTHON_VERSION = "3.11"
+  ULTRALYTICS_NO_FASTSAM = "1"
 
 [http_service]
   internal_port = 8080
@@ -37,5 +38,5 @@ primary_region = "iad"
 [[vm]]
   cpu_kind = "shared"
   cpus = 1
-  memory_mb = 512
+  memory_mb = 2048  # Increased for ML models (free tier allows up to 3GB shared)
 
