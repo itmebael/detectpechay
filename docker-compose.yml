@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  pechaydetect:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pechaydetect-app
+    ports:
+      - "8080:8080"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:-change-this-secret-key-in-production}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - PORT=8080
+      - ULTRALYTICS_NO_FASTSAM=1
+    volumes:
+      - ./uploads:/app/uploads
+      - ./uploads/dataset:/app/uploads/dataset
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080/healthz')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
