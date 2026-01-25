@@ -423,6 +423,9 @@ def uploaded_file(filename):
 
 @app.route('/uploads/dataset/<filename>')
 def uploaded_dataset_file(filename):
+    # For Vercel/serverless: check /tmp first
+    if os.path.exists('/tmp/uploads/dataset') and os.path.exists(f'/tmp/uploads/dataset/{filename}'):
+        return send_from_directory('/tmp/uploads/dataset', filename)
     return send_from_directory(os.path.join('uploads', 'dataset'), filename)
 
 @app.route('/healthz')
