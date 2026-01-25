@@ -100,6 +100,11 @@ class DatabaseService:
                 })
             
             return formatted_results
+        except Exception as e:
+            print(f"❌ Error getting user detections: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
     
     @staticmethod
     def delete_detection(user_id: str, detection_id: str) -> bool:
