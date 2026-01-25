@@ -353,6 +353,11 @@ const translations = {
     no_filtered_results: "Waray",
     leaves_found: "nga mga dahon an nakit-an. Subayi na alisin an filter o mag-upload hin bag-o nga mga ladawan.",
     date: "Petsa:",
+    delete: "🗑️ Tangtangon",
+    delete_confirm: "Sigurado ka ba nga gusto mo nga tangtangon ini nga resulta han detection?\n\nFile: {filename}\n\nDiri na ini maibabalik.",
+    deleting: "⏳ Ginatangtang...",
+    delete_success: "✓ Matagumpay nga natangtang an detection",
+    delete_error: "Error ha pagtangtang han detection: ",
     
     // Analytics Page
     analytics_reports: "📈 Analytics ngan Mga Report",
