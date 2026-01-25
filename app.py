@@ -73,8 +73,12 @@ def get_cnn_predictor():
         return None
 
 # Preload YOLO model at startup (shared instance)
-print("=== Preloading YOLO model at startup ===")
-get_yolo_model()
+# DISABLED: YOLO loading causes memory issues on Render free tier
+# Uncomment below to enable YOLO (not recommended for free tier)
+# print("=== Preloading YOLO model at startup ===")
+# get_yolo_model()
+print("=== YOLO model loading DISABLED to prevent memory issues ===")
+print("=== Detection will use Roboflow API only (no YOLO validation) ===")
 
 @app.route('/')
 def index():

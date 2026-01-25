@@ -807,8 +807,11 @@ class DetectionService:
                 validation_errors.append('green_stem')
                 reasons.append(f"Image appears to be a green stem (aspect ratio {stem_validation['aspect_ratio']:.1f}) - not a pechay leaf")
 
-            # 6. Optional YOLO-based validation for obvious non-leaf objects (lazy load)
-            if _check_yolo():
+            # 6. Optional YOLO-based validation for obvious non-leaf objects
+            # DISABLED: Skip YOLO validation to prevent memory issues on Render
+            # YOLO validation causes memory spikes and worker crashes
+            # The Roboflow API will handle detection, so YOLO validation is not critical
+            if False and _check_yolo():  # Disabled - set to True to enable
                 try:
                     yolo_validation = self._validate_with_yolo(image_path)
                     if not yolo_validation.get('is_valid'):
