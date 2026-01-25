@@ -767,6 +767,7 @@ class DetectionService:
             
             if _check_face_recognition():
                 try:
+                    import face_recognition  # Lazy import
                     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     face_locations = face_recognition.face_locations(rgb_image)
                     if len(face_locations) > 0:
