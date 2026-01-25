@@ -325,18 +325,25 @@ def dashboard():
                     from services.database_service import DatabaseService
                     db_service = DatabaseService()
                     
-                    saved_result = db_service.save_detection(
-                        user_id=user_id,
-                        image_path=f"uploads/{filename}",
-                        detection_result=detection_result
-                    )
-                    
-                    if saved_result:
-                        upload_status = "Image processed and saved successfully!"
-                        print(f"Detection saved: {saved_result}")
-                    else:
-                        upload_status = "Detection completed but failed to save to database."
-                        print("Warning: Detection result not saved to database")
+                    try:
+                        saved_result = db_service.save_detection(
+                            user_id=user_id,
+                            image_path=f"uploads/{filename}",
+                            detection_result=detection_result
+                        )
+                        
+                        if saved_result:
+                            upload_status = "Image processed and saved successfully!"
+                            print(f"Detection saved: {saved_result}")
+                        else:
+                            upload_status = "Detection completed but failed to save to database."
+                            print("Warning: Detection result not saved to database")
+                    except Exception as db_error:
+                        print(f"Database save error: {db_error}")
+                        import traceback
+                        traceback.print_exc()
+                        upload_status = f"Detection completed but database save failed: {str(db_error)}"
+                        saved_result = None
                         
                 except Exception as e:
                     print(f"Upload error: {e}")
