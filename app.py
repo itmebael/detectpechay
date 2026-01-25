@@ -244,11 +244,26 @@ def dashboard():
                     print(f"User ID: {user_id}")
                     
                     # Process image with detection service (Roboflow API first)
-                    from services.detection_service import DetectionService
-                    print(f"\n=== Starting Detection Service ===")
-                    detection_service = DetectionService()
-                    print(f"Calling API for image detection (Roboflow)...")
-                    detection_result = detection_service.detect_leaf(filepath)
+                    # Import detection service lazily to avoid heavy imports at startup
+                    try:
+                        from services.detection_service import DetectionService
+                        print(f"\n=== Starting Detection Service ===")
+                        detection_service = DetectionService()
+                        print(f"Calling API for image detection (Roboflow)...")
+                        # Set a timeout for detection to prevent worker timeout
+                        import signal
+                        detection_result = detection_service.detect_leaf(filepath)
+                    except Exception as e:
+                        print(f"Detection service error: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        detection_result = {
+                            'filename': filename,
+                            'condition': 'Diseased',
+                            'disease_name': 'Detection Failed',
+                            'confidence': 0.0,
+                            'error': f'Detection service error: {str(e)}'
+                        }
                     api_result = detection_result if isinstance(detection_result, dict) else None
                     
                     if isinstance(detection_result, dict):

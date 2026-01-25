@@ -10,31 +10,55 @@ from typing import Dict, Optional, Tuple
 from utils.disease_info import get_treatment_recommendations, get_condition_from_disease
 from utils.image_processor import ImageProcessor
 
-# Try to use Roboflow inference package, fallback to HTTP requests
-try:
-    from inference_sdk import InferenceHTTPClient
-    INFERENCE_SDK_AVAILABLE = True
-    print("✓ Roboflow inference_sdk available")
-except ImportError:
-    INFERENCE_SDK_AVAILABLE = False
-    print("⚠ inference_sdk not available, will use HTTP requests")
+# Lazy imports to avoid heavy loading at startup
+INFERENCE_SDK_AVAILABLE = None  # Will be checked when needed
+YOLO_AVAILABLE = None  # Will be checked when needed
+FACE_RECOGNITION_AVAILABLE = None  # Will be checked when needed
+
+def _check_inference_sdk():
+    """Lazy check for inference_sdk"""
+    global INFERENCE_SDK_AVAILABLE
+    if INFERENCE_SDK_AVAILABLE is None:
+        try:
+            from inference_sdk import InferenceHTTPClient
+            INFERENCE_SDK_AVAILABLE = True
+            print("✓ Roboflow inference_sdk available")
+        except ImportError:
+            INFERENCE_SDK_AVAILABLE = False
+            print("⚠ inference_sdk not available, will use HTTP requests")
+    return INFERENCE_SDK_AVAILABLE
+
+def _check_yolo():
+    """Lazy check for YOLO - avoid importing heavy torch dependencies"""
+    global YOLO_AVAILABLE
+    if YOLO_AVAILABLE is None:
+        try:
+            # Only check if module exists, don't import yet
+            import importlib.util
+            spec = importlib.util.find_spec("ultralytics")
+            YOLO_AVAILABLE = spec is not None
+            if not YOLO_AVAILABLE:
+                print("Warning: ultralytics not available")
+        except Exception:
+            YOLO_AVAILABLE = False
+    return YOLO_AVAILABLE
+
+def _check_face_recognition():
+    """Lazy check for face_recognition"""
+    global FACE_RECOGNITION_AVAILABLE
+    if FACE_RECOGNITION_AVAILABLE is None:
+        try:
+            import importlib.util
+            spec = importlib.util.find_spec("face_recognition")
+            FACE_RECOGNITION_AVAILABLE = spec is not None
+            if not FACE_RECOGNITION_AVAILABLE:
+                print("Warning: face_recognition not available")
+        except Exception:
+            FACE_RECOGNITION_AVAILABLE = False
+    return FACE_RECOGNITION_AVAILABLE
 
 # Use HTTP requests directly as fallback
 ROBOFLOW_AVAILABLE = True  # Always available - using HTTP requests
-
-try:
-    from ultralytics import YOLO
-    YOLO_AVAILABLE = True
-except ImportError:
-    YOLO_AVAILABLE = False
-    print("Warning: ultralytics not available. Install with: pip install ultralytics")
-
-try:
-    import face_recognition
-    FACE_RECOGNITION_AVAILABLE = True
-except ImportError:
-    FACE_RECOGNITION_AVAILABLE = False
-    print("Warning: face_recognition not available. Install with: pip install face-recognition")
 
 # Enable validation if packages are available
 # ENABLE_HEAVY_VALIDATION flag removed to ensure validation always runs if packages are present
@@ -49,28 +73,13 @@ class DetectionService:
         self.workspace_name = "bael"
         self.workflow_id = "custom-workflow-3"  # Can be changed to "custom-workflow-2" if needed
         
-        # Initialize inference client if available
+        # Initialize inference client lazily (only when needed)
         self.inference_client = None
-        if INFERENCE_SDK_AVAILABLE:
-            try:
-                self.inference_client = InferenceHTTPClient(
-                    api_url="https://detect.roboflow.com",
-                    api_key=self.api_key
-                )
-                print("✓ InferenceHTTPClient initialized")
-            except Exception as e:
-                print(f"⚠ Failed to initialize InferenceHTTPClient: {e}")
-                self.inference_client = None
+        self._inference_client_initialized = False
         
-        # Initialize YOLO model if available
+        # Don't initialize YOLO model at startup - load lazily when needed
         self.yolo_model = None
-        if YOLO_AVAILABLE:
-            try:
-                print("Loading YOLOv8n model for object detection...")
-                self.yolo_model = YOLO('yolov8n.pt')
-                print("✓ YOLOv8n model initialized")
-            except Exception as e:
-                print(f"⚠ Failed to initialize YOLO model: {e}")
+        self._yolo_model_initialized = False
     
     def detect_leaf(self, image_path: str) -> Dict:
         """
@@ -756,7 +765,7 @@ class DetectionService:
                     'reasons': ['Could not read image file']
                 }
             
-            if FACE_RECOGNITION_AVAILABLE:
+            if _check_face_recognition():
                 try:
                     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     face_locations = face_recognition.face_locations(rgb_image)
@@ -796,12 +805,16 @@ class DetectionService:
                 validation_errors.append('green_stem')
                 reasons.append(f"Image appears to be a green stem (aspect ratio {stem_validation['aspect_ratio']:.1f}) - not a pechay leaf")
 
-            # 6. Optional YOLO-based validation for obvious non-leaf objects
-            if YOLO_AVAILABLE:
-                yolo_validation = self._validate_with_yolo(image_path)
-                if not yolo_validation.get('is_valid'):
-                    validation_errors.extend(yolo_validation.get('errors', []))
-                    reasons.extend(yolo_validation.get('reasons', []))
+            # 6. Optional YOLO-based validation for obvious non-leaf objects (lazy load)
+            if _check_yolo():
+                try:
+                    yolo_validation = self._validate_with_yolo(image_path)
+                    if not yolo_validation.get('is_valid'):
+                        validation_errors.extend(yolo_validation.get('errors', []))
+                        reasons.extend(yolo_validation.get('reasons', []))
+                except Exception as e:
+                    print(f"YOLO validation skipped due to error: {e}")
+                    # Fail open - continue without YOLO validation
             
             # Relaxed: Leaf shape check is too strict for zoomed-in images
             # leaf_shape = self._check_leaf_shape(image)
@@ -1037,15 +1050,30 @@ class DetectionService:
             return {'is_wall': False}
     
     def _validate_with_yolo(self, image_path: str) -> Dict:
-        """Use YOLO to detect non-leaf objects (persons, cars, etc.)"""
+        """Use YOLO to detect non-leaf objects (persons, cars, etc.) - lazy loaded"""
         errors = []
         reasons = []
         
         try:
-            # Use initialized model or load new one
-            model = getattr(self, 'yolo_model', None)
+            # Lazy load YOLO only when needed
+            if not self._yolo_model_initialized:
+                if not _check_yolo():
+                    return {'is_valid': True, 'errors': [], 'reasons': []}
+                
+                try:
+                    from ultralytics import YOLO
+                    print("Loading YOLOv8n model for validation (lazy load)...")
+                    self.yolo_model = YOLO('yolov8n.pt')
+                    self._yolo_model_initialized = True
+                    print("✓ YOLOv8n model loaded")
+                except Exception as e:
+                    print(f"⚠ Failed to load YOLO model: {e}")
+                    self._yolo_model_initialized = False
+                    return {'is_valid': True, 'errors': [], 'reasons': []}
+            
+            model = self.yolo_model
             if model is None:
-                model = YOLO('yolov8n.pt')
+                return {'is_valid': True, 'errors': [], 'reasons': []}
             
             # Run inference
             results = model(image_path)
