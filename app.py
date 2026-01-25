@@ -415,6 +415,9 @@ def dashboard():
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
+    # For Vercel/serverless: check /tmp first
+    if os.path.exists('/tmp/uploads') and os.path.exists(f'/tmp/uploads/{filename}'):
+        return send_from_directory('/tmp/uploads', filename)
     return send_from_directory('uploads', filename)
 
 
