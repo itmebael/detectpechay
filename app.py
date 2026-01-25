@@ -473,9 +473,9 @@ def upload_dataset_workflow():
         if treatment:
             parts.append("Treatment notes saved")
         
-        flash(' | '.join(parts))
+        flash(f"success_dataset_workflow|{' | '.join(parts)}")
     except Exception as e:
-        flash(f"Error processing dataset workflow: {e}")
+        flash(f"error_dataset_workflow|Error processing dataset workflow: {e}")
     
     return redirect(url_for('dataset_manager'))
 

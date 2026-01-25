@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dataset Manager - Pechay Detection System</title>
+  <title data-i18n-title="dataset_manager_title">Dataset Manager - Pechay Detection System</title>
+  <script src="{{ url_for('static', filename='js/language.js') }}"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
     body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f8f4; }
@@ -201,11 +202,20 @@
   </div>
 
   <div class="main">
-    <div class="header">Dataset Manager - Pechay Detection System</div>
+    <div class="header" data-i18n="dataset_manager_title">Dataset Manager - Pechay Detection System</div>
     <div class="content">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for m in messages %}
+            <div class="status-message" data-server-message="{{ m }}">
+              {{ m.split('|')[1] if '|' in m else m }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
       <div class="card">
-        <h1>Feature Disabled</h1>
-        <p>This feature has been disabled.</p>
+        <h1 data-i18n="feature_disabled_title">Feature Disabled</h1>
+        <p data-i18n="feature_disabled_msg">This feature has been disabled.</p>
       </div>
     </div>
   </div>

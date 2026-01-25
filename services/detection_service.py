@@ -790,7 +790,13 @@ class DetectionService:
                     validation_errors.append('wall_background')
                     reasons.append("Image appears to be a wall or background - not a pechay leaf")
             
-            # 5. Optional YOLO-based validation for obvious non-leaf objects
+            # 5. Check for green stems (long thin green objects)
+            stem_validation = self._detect_stem(image)
+            if stem_validation['is_stem']:
+                validation_errors.append('green_stem')
+                reasons.append(f"Image appears to be a green stem (aspect ratio {stem_validation['aspect_ratio']:.1f}) - not a pechay leaf")
+
+            # 6. Optional YOLO-based validation for obvious non-leaf objects
             if YOLO_AVAILABLE:
                 yolo_validation = self._validate_with_yolo(image_path)
                 if not yolo_validation.get('is_valid'):
@@ -808,10 +814,10 @@ class DetectionService:
                 skin_percentage = skin_validation.get('skin_percentage', 0.0)
                 green_pct = green_validation.get('green_percentage', 0.0)
                 for err in validation_errors:
-                    # Only block on fundamental image issues (no green, wall)
+                    # Only block on fundamental image issues (no green, wall, stem)
                     # We allow faces and YOLO-detected objects (like persons) so that 
                     # if a person is holding a pechay, the system still attempts detection.
-                    if err in ['no_green_color', 'wall_background']:
+                    if err in ['no_green_color', 'wall_background', 'green_stem']:
                         critical_errors.append(err)
                     
                     # Note: We explicitly DO NOT add 'face_detected' or 'yolo_*' to critical_errors.

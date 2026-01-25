@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</title>
+<title data-i18n-title="header_title">AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</title>
+<script src="{{ url_for('static', filename='js/language.js') }}"></script>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
@@ -531,7 +532,7 @@ body::before {
 <!-- Splash Screen -->
 <div class="splash-screen" id="splashScreen">
   <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="splash-logo" id="splashLogo" onclick="handleSplashClick()">
-  <div class="splash-text" id="splashText" onclick="handleSplashClick()">AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</div>
+  <div class="splash-text" id="splashText" onclick="handleSplashClick()" data-i18n="splash_text">AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</div>
 </div>
 
 <div class="layout-wrapper">
@@ -542,22 +543,22 @@ body::before {
 
   <div class="glass-container">
 
-    <h1 style="font-size: 1.5rem; text-align: center;">AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</h1>
-    <h2 style="text-align: center; color: #052e16; margin-bottom: 20px; font-size: 1.4rem; font-weight: 600;">Log In</h2>
+    <h1 style="font-size: 1.5rem; text-align: center;" data-i18n="header_title">AI-POWERED DETECTION OF DISEASE IN PECHAY LEAVES</h1>
+    <h2 style="text-align: center; color: #052e16; margin-bottom: 20px; font-size: 1.4rem; font-weight: 600;" data-i18n="login_title">Log In</h2>
 
   <!-- LOGIN -->
   <form method="POST" class="login-form active">
     <div class="form-group">
       <i class="fas fa-user"></i>
-      <input class="glass-input" name="username" placeholder="Username" required>
+      <input class="glass-input" name="username" placeholder="" data-i18n-placeholder="username" required>
     </div>
 
     <div class="form-group">
       <i class="fas fa-lock"></i>
-      <input type="password" class="glass-input" name="password" placeholder="Password" required>
+      <input type="password" class="glass-input" name="password" placeholder="" data-i18n-placeholder="password" required>
     </div>
 
-    <button class="glass-btn">Login</button>
+    <button class="glass-btn" data-i18n="login_button">Login</button>
 
     {% if error %}
       <div class="error">{{ error }}</div>
@@ -569,6 +570,16 @@ body::before {
 
   <div class="footer">
     © 2026 Pechay Detection System
+  </div>
+  
+  <!-- Language Selector -->
+  <div style="text-align: center; margin-top: 15px;">
+    <label style="color: #052e16; font-weight: 600; margin-right: 10px;" data-i18n="select_language">Select Language:</label>
+    <select id="languageSelect" style="padding: 8px 12px; border: 2px solid #052e16; border-radius: 8px; background: rgba(255,255,255,0.8); color: #052e16; font-weight: 500; cursor: pointer;">
+      <option value="en">English</option>
+      <option value="tl">Tagalog</option>
+      <option value="war">Waray-Waray</option>
+    </select>
   </div>
 
 </div>
