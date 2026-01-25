@@ -70,6 +70,11 @@ const translations = {
     no_filtered_results: "No",
     leaves_found: "leaves found. Try removing the filter or upload new images.",
     date: "Date:",
+    delete: "🗑️ Delete",
+    delete_confirm: "Are you sure you want to delete this detection result?\n\nFile: {filename}\n\nThis action cannot be undone.",
+    deleting: "⏳ Deleting...",
+    delete_success: "✓ Detection deleted successfully",
+    delete_error: "Error deleting detection: ",
     
     // Analytics Page
     analytics_reports: "📈 Analytics & Reports",

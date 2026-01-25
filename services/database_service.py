@@ -98,6 +98,40 @@ class DatabaseService:
                 })
             
             return formatted_results
+    
+    @staticmethod
+    def delete_detection(user_id: str, detection_id: str) -> bool:
+        """Delete a detection result by ID (only if owned by user)"""
+        try:
+            # First verify the detection belongs to the user
+            check_response = supabase.table(TABLES['detections'])\
+                .select('id')\
+                .eq('id', detection_id)\
+                .eq('user_id', user_id)\
+                .execute()
+            
+            if not check_response.data or len(check_response.data) == 0:
+                print(f"Detection {detection_id} not found or doesn't belong to user {user_id}")
+                return False
+            
+            # Delete the detection
+            delete_response = supabase.table(TABLES['detections'])\
+                .delete()\
+                .eq('id', detection_id)\
+                .eq('user_id', user_id)\
+                .execute()
+            
+            if delete_response.data:
+                print(f"✓ Detection {detection_id} deleted successfully")
+                return True
+            else:
+                print(f"⚠ Warning: Delete succeeded but no data returned")
+                return False
+        except Exception as e:
+            print(f"❌ Error deleting detection: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
         except Exception as e:
             print(f"Error getting detections: {e}")
             import traceback

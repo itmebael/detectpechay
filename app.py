@@ -651,6 +651,37 @@ def download_report():
     output.headers["Content-type"] = "text/csv"
     return output
 
+@app.route('/api/delete_detection', methods=['POST'])
+def delete_detection():
+    """Delete a detection result"""
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        data = request.json
+        detection_id = data.get('id')
+        
+        if not detection_id:
+            return jsonify({'success': False, 'error': 'Detection ID required'}), 400
+        
+        user_id = session.get('user_id')
+        
+        from services.database_service import DatabaseService
+        db_service = DatabaseService()
+        
+        success = db_service.delete_detection(user_id, detection_id)
+        
+        if success:
+            return jsonify({'success': True, 'message': 'Detection deleted successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to delete detection or detection not found'}), 404
+            
+    except Exception as e:
+        print(f"Delete detection error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Get port from environment variable (Render provides this) or default to 5000
     port = int(os.environ.get('PORT', 5000))
