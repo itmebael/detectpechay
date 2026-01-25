@@ -384,6 +384,12 @@ def dashboard():
         filter_condition = request.args.get('filter')
         results = db_service.get_user_detections(user_id, limit=50, condition=filter_condition)
         print(f"Detection results: {len(results)} found")
+        # Debug: Check if IDs are present
+        if results:
+            ids_present = sum(1 for r in results if r.get('id'))
+            print(f"Results with IDs: {ids_present}/{len(results)}")
+            if ids_present < len(results):
+                print(f"⚠ Warning: Some results missing IDs. First result keys: {list(results[0].keys()) if results else 'No results'}")
         
     except Exception as e:
         print(f"Database error: {e}")
