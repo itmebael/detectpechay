@@ -68,8 +68,9 @@ class DatabaseService:
     def get_user_detections(user_id: str, limit: int = 100, condition: Optional[str] = None) -> List[Dict]:
         """Get detection history for user from detection_results table"""
         try:
+            # Select all fields including id
             query = supabase.table(TABLES['detections'])\
-                .select('*')\
+                .select('id, user_id, image_path, condition, confidence, created_at, disease_name, filename, recommendation')\
                 .eq('user_id', user_id)
             
             if condition:
