@@ -172,7 +172,12 @@ def detect_live():
         # Save temporarily for processing
         user_id = session.get('user_id')
         filename = f"live_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-        uploads_dir = os.path.join('uploads')
+        # For Vercel/serverless: use /tmp directory (writable)
+        # For regular deployment: use uploads directory
+        if os.path.exists('/tmp'):
+            uploads_dir = '/tmp/uploads'
+        else:
+            uploads_dir = os.path.join('uploads')
         os.makedirs(uploads_dir, exist_ok=True)
         filepath = os.path.join(uploads_dir, filename)
         
@@ -432,7 +437,12 @@ def upload_image_immediate():
         return jsonify({'success': False, 'error': 'No file provided'}), 400
     
     try:
-        uploads_dir = os.path.join('uploads', 'dataset')
+        # For Vercel/serverless: use /tmp directory (writable)
+        # For regular deployment: use uploads directory
+        if os.path.exists('/tmp'):
+            uploads_dir = '/tmp/uploads/dataset'
+        else:
+            uploads_dir = os.path.join('uploads', 'dataset')
         os.makedirs(uploads_dir, exist_ok=True)
         
         filename = secure_filename(file.filename)
