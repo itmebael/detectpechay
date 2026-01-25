@@ -1052,27 +1052,12 @@ class DetectionService:
             return {'is_wall': False}
     
     def _validate_with_yolo(self, image_path: str) -> Dict:
-        """Use YOLO to detect non-leaf objects (persons, cars, etc.) - lazy loaded"""
+        """Use YOLO to detect non-leaf objects (persons, cars, etc.) - uses shared model"""
         errors = []
         reasons = []
         
         try:
-            # Lazy load YOLO only when needed
-            if not self._yolo_model_initialized:
-                if not _check_yolo():
-                    return {'is_valid': True, 'errors': [], 'reasons': []}
-                
-                try:
-                    from ultralytics import YOLO
-                    print("Loading YOLOv8n model for validation (lazy load)...")
-                    self.yolo_model = YOLO('yolov8n.pt')
-                    self._yolo_model_initialized = True
-                    print("✓ YOLOv8n model loaded")
-                except Exception as e:
-                    print(f"⚠ Failed to load YOLO model: {e}")
-                    self._yolo_model_initialized = False
-                    return {'is_valid': True, 'errors': [], 'reasons': []}
-            
+            # Use shared YOLO model (loaded once at app startup)
             model = self.yolo_model
             if model is None:
                 # Fallback: try to lazy load if not provided
