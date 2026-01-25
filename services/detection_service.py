@@ -1058,22 +1058,15 @@ class DetectionService:
         
         try:
             # Use shared YOLO model (loaded once at app startup)
+            # CRITICAL: Skip YOLO validation if model is not available to prevent memory issues
             model = self.yolo_model
             if model is None:
-                # Fallback: try to lazy load if not provided
-                if not _check_yolo():
-                    return {'is_valid': True, 'errors': [], 'reasons': []}
-                try:
-                    from ultralytics import YOLO
-                    print("Loading YOLOv8n model for validation (fallback lazy load)...")
-                    self.yolo_model = YOLO('yolov8n.pt')
-                    self._yolo_model_initialized = True
-                    model = self.yolo_model
-                except Exception as e:
-                    print(f"⚠ Failed to load YOLO model: {e}")
-                    return {'is_valid': True, 'errors': [], 'reasons': []}
+                # Don't lazy load - skip validation instead to prevent memory spikes
+                print("⚠ YOLO model not available, skipping YOLO validation (memory optimization)")
+                return {'is_valid': True, 'errors': [], 'reasons': []}
             
-            if model is None:
+            if not hasattr(model, 'predict') and not hasattr(model, '__call__'):
+                print("⚠ YOLO model invalid, skipping YOLO validation")
                 return {'is_valid': True, 'errors': [], 'reasons': []}
             
             # Run inference with memory-efficient settings

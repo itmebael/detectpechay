@@ -289,8 +289,14 @@ def dashboard():
                         print(f"\n=== Starting Detection Service ===")
                         # Pass shared YOLO model to avoid reloading (CRITICAL for memory)
                         shared_yolo_model = get_yolo_model()
+                        if shared_yolo_model is None:
+                            print("⚠ Warning: YOLO model not available, detection will proceed without YOLO validation")
                         detection_service = DetectionService(yolo_model=shared_yolo_model)
                         print(f"Calling API for image detection (Roboflow)...")
+                        if shared_yolo_model:
+                            print(f"✓ Using shared YOLO model (pre-loaded)")
+                        else:
+                            print(f"⚠ YOLO validation will be skipped (no model available)")
                         # Set a timeout for detection to prevent worker timeout
                         import signal
                         detection_result = detection_service.detect_leaf(filepath)
