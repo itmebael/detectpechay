@@ -5,10 +5,11 @@ This guide will help you deploy the Pechay Detection System to Vercel.
 ## ⚠️ Important Notes
 
 **Vercel Limitations:**
-- Serverless functions have a 60-second timeout (configurable up to 300s on Pro)
+- Serverless functions have a 60-second timeout (configurable up to 300s on Pro plan)
 - File system is read-only except `/tmp` directory
-- Memory limit: 3GB (Pro plan)
-- Cold starts can be slow for heavy ML models
+- Memory limit: 2048MB free tier, 3008MB Pro plan
+- Cold starts can be slow for heavy ML models (YOLO loading)
+- Free tier has usage limits (100GB bandwidth/month)
 
 **Recommendations:**
 - Consider Railway or Fly.io for better ML model support
@@ -66,13 +67,19 @@ This guide will help you deploy the Pechay Detection System to Vercel.
    vercel login
    ```
 
-3. **Deploy**
+3. **Deploy (Preview)**
    ```bash
    vercel
    ```
+   This creates a preview deployment. Answer the prompts:
+   - Link to existing project? **Yes** (if already linked) or **No** (to create new)
+   - Project name: `detectpechay` (or your preferred name)
+   - Directory: `./` (current directory)
+   - Override settings? **No** (use vercel.json)
 
 4. **Set Environment Variables**
    ```bash
+   # Interactive mode (will prompt for values)
    vercel env add FLASK_SECRET_KEY
    vercel env add SUPABASE_URL
    vercel env add SUPABASE_ANON_KEY
@@ -80,6 +87,18 @@ This guide will help you deploy the Pechay Detection System to Vercel.
    vercel env add PYTHON_VERSION 3.11
    vercel env add ULTRALYTICS_NO_FASTSAM 1
    ```
+   
+   **Or set all at once:**
+   ```bash
+   vercel env add FLASK_SECRET_KEY production
+   vercel env add SUPABASE_URL production
+   vercel env add SUPABASE_ANON_KEY production
+   vercel env add FLASK_ENV production production
+   vercel env add PYTHON_VERSION production 3.11
+   vercel env add ULTRALYTICS_NO_FASTSAM production 1
+   ```
+   
+   **Note:** Replace `production` with `preview` or `development` if needed for different environments.
 
 5. **Deploy to Production**
    ```bash
@@ -92,10 +111,11 @@ This guide will help you deploy the Pechay Detection System to Vercel.
 
 ### `vercel.json`
 Already configured with:
-- Python runtime (`@vercel/python`)
-- 60-second timeout
-- 3GB memory limit
-- Production environment variables
+- Python runtime (`@vercel/python`) via `builds` property
+- Routes all requests to `app.py`
+- Production environment variables (`FLASK_ENV`, `ULTRALYTICS_NO_FASTSAM`)
+
+**Note:** The current configuration uses `builds` (legacy format) which works reliably with Flask apps. The `functions` property is not used to avoid conflicts.
 
 ### File Upload Handling
 The app automatically detects Vercel environment and uses `/tmp` directory for file uploads (Vercel's writable directory).
@@ -105,21 +125,37 @@ The app automatically detects Vercel environment and uses `/tmp` directory for f
 ## 🔧 Troubleshooting
 
 ### Issue: Function Timeout
-**Solution:** Increase timeout in `vercel.json`:
+**Solution:** 
+- Default timeout is 60 seconds (free tier)
+- To increase timeout, you need Vercel Pro plan
+- Update `vercel.json` to use `functions` instead of `builds`:
 ```json
-"functions": {
-  "app.py": {
-    "maxDuration": 300,  // 5 minutes (Pro plan only)
-    "memory": 3008
-  }
+{
+  "version": 2,
+  "functions": {
+    "app.py": {
+      "runtime": "@vercel/python",
+      "maxDuration": 300,  // 5 minutes (Pro plan only)
+      "memory": 2048  // Max for free tier, 3008 for Pro
+    }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ]
 }
 ```
+**Warning:** Don't use both `builds` and `functions` together - choose one approach.
 
 ### Issue: Memory Errors
 **Solution:** 
-- Already configured with 3GB memory
-- Ensure `ULTRALYTICS_NO_FASTSAM=1` is set
-- Consider using Railway/Fly.io for better ML support
+- Free tier limit: 2048MB (2GB)
+- Pro tier limit: 3008MB (3GB)
+- Ensure `ULTRALYTICS_NO_FASTSAM=1` is set (already configured)
+- YOLO model loading is optimized to load once at startup
+- Consider using Railway/Fly.io for better ML support if memory issues persist
 
 ### Issue: File Upload Fails
 **Solution:**
