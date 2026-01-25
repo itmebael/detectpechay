@@ -280,9 +280,18 @@ def dashboard():
     
     # Get data from Supabase using database service
     from services.database_service import DatabaseService
-    db_service = DatabaseService()
+    
+    # Initialize default values
+    dashboard_stats = {
+        'total_scans': 0,
+        'healthy_leaves': 0,
+        'diseased_leaves': 0,
+        'success_rate': 0
+    }
+    results = []
     
     try:
+        db_service = DatabaseService()
         # Get dashboard stats
         dashboard_stats = db_service.get_dashboard_stats(user_id)
         print(f"Dashboard stats: {dashboard_stats}")
@@ -296,13 +305,7 @@ def dashboard():
         print(f"Database error: {e}")
         import traceback
         traceback.print_exc()
-        dashboard_stats = {
-            'total_scans': 0,
-            'healthy_leaves': 0,
-            'diseased_leaves': 0,
-            'success_rate': 0
-        }
-        results = []
+        # Use default values already set above
     
     # Get analytics data if on analytics page
     analytics_data = None
