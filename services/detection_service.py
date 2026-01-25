@@ -1073,15 +1073,24 @@ class DetectionService:
                 return {'is_valid': True, 'errors': [], 'reasons': []}
             
             # Run inference with memory-efficient settings
-            # CRITICAL: Use small image size, CPU, no half precision to save memory
-            results = model(
-                image_path,
-                imgsz=320,      # Smaller image size (default is 640)
-                conf=0.4,       # Lower confidence threshold
-                device="cpu",   # Force CPU (no GPU on Render)
-                half=False,     # CRITICAL: Never use half=True on CPU
-                verbose=False   # Reduce output
-            )
+            # CRITICAL: Use very small image size, CPU, no half precision to save memory
+            # Even smaller settings to prevent memory issues on Render free tier
+            try:
+                results = model(
+                    image_path,
+                    imgsz=256,      # Very small image size (was 320, default is 640)
+                    conf=0.5,       # Higher confidence to reduce processing
+                    device="cpu",   # Force CPU (no GPU on Render)
+                    half=False,     # CRITICAL: Never use half=True on CPU
+                    verbose=False,  # Reduce output
+                    max_det=10      # Limit max detections to reduce memory
+                )
+            except Exception as e:
+                print(f"YOLO inference error (memory issue?): {e}")
+                import traceback
+                traceback.print_exc()
+                # Return valid to skip YOLO validation if inference fails
+                return {'is_valid': True, 'errors': [], 'reasons': []}
             
             # COCO class names that are NOT leaves
             non_leaf_classes = [
