@@ -88,6 +88,7 @@ class DatabaseService:
                     filename = os.path.basename(row.get('image_path'))
                 
                 formatted_results.append({
+                    'id': row.get('id'),  # Add ID for delete functionality
                     'filename': filename or 'unknown.jpg',
                     'condition': row.get('condition', 'Unknown'),
                     'disease_name': row.get('disease_name'),
