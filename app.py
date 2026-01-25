@@ -287,7 +287,9 @@ def dashboard():
                     try:
                         from services.detection_service import DetectionService
                         print(f"\n=== Starting Detection Service ===")
-                        detection_service = DetectionService()
+                        # Pass shared YOLO model to avoid reloading (CRITICAL for memory)
+                        shared_yolo_model = get_yolo_model()
+                        detection_service = DetectionService(yolo_model=shared_yolo_model)
                         print(f"Calling API for image detection (Roboflow)...")
                         # Set a timeout for detection to prevent worker timeout
                         import signal
