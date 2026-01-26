@@ -130,15 +130,16 @@
       position: absolute !important;
       top: 10px !important;
       right: 10px !important;
-      background: rgba(220, 53, 69, 0.95) !important;
+      background: #dc3545 !important;
       color: white !important;
-      border: none !important;
+      border: 2px solid white !important;
       border-radius: 50% !important;
-      width: 36px !important;
-      height: 36px !important;
+      width: 40px !important;
+      height: 40px !important;
       cursor: pointer !important;
-      font-size: 1.1rem !important;
-      z-index: 100 !important;
+      font-size: 18px !important;
+      font-weight: bold !important;
+      z-index: 9999 !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -146,11 +147,22 @@
       line-height: 1 !important;
       visibility: visible !important;
       opacity: 1 !important;
+      box-shadow: 0 3px 10px rgba(220, 53, 69, 0.6) !important;
+      transition: all 0.3s ease !important;
     }
     .delete-result-btn:hover {
-      background: rgba(220, 53, 69, 1) !important;
-      transform: scale(1.1) !important;
-      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.6) !important;
+      background: #c82333 !important;
+      transform: scale(1.15) !important;
+      box-shadow: 0 5px 15px rgba(220, 53, 69, 0.8) !important;
+    }
+    .delete-result-btn:active {
+      transform: scale(0.9) !important;
+    }
+    /* Ensure button is never hidden */
+    .result-card .delete-result-btn {
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
     .result-card { 
       background: rgba(255, 255, 255, 0.25);
@@ -1120,7 +1132,7 @@
           {% for r in results %}
           <div class="result-card {{ 'healthy' if r.condition == 'Healthy' else 'diseased' }}" style="border-left: 5px solid; position: relative;" data-pechay-status="{% if r.disease_name in ['Not Pechay Leaf', 'Not Pechay', 'Detection Failed'] %}not-pechay{% else %}pechay{% endif %}" data-condition="{{ 'healthy' if r.condition == 'Healthy' else 'diseased' }}" data-detection-id="{{ r.id if r.id else '' }}">
             <!-- Delete Button - Always Visible -->
-            <button class="delete-result-btn" onclick="deleteDetection('{{ r.id if r.id else '' }}', '{{ r.filename }}')" title="Delete this result" data-i18n="delete" aria-label="Delete" data-detection-id="{{ r.id if r.id else '' }}" style="position: absolute; top: 10px; right: 10px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 1.1rem; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);">🗑️</button>
+            <button class="delete-result-btn" onclick="deleteDetection('{{ r.id if r.id else '' }}', '{{ r.filename }}')" title="Delete this result" data-i18n="delete" aria-label="Delete" data-detection-id="{{ r.id if r.id else '' }}" style="position: absolute !important; top: 10px !important; right: 10px !important; background: #dc3545 !important; color: white !important; border: 2px solid white !important; border-radius: 50% !important; width: 40px !important; height: 40px !important; cursor: pointer !important; font-size: 18px !important; z-index: 9999 !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: 0 !important; box-shadow: 0 3px 10px rgba(220, 53, 69, 0.6) !important; visibility: visible !important; opacity: 1 !important; line-height: 1 !important;">✕</button>
             <h4 class="{{ 'status-healthy' if r.condition == 'Healthy' else 'status-diseased' }}" style="margin-top: 0;">{{ r.filename }}</h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 15px 0;">
               <div style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); padding: 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
