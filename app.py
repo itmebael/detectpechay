@@ -80,6 +80,12 @@ def get_cnn_predictor():
 print("=== YOLO model loading DISABLED to prevent memory issues ===")
 print("=== Detection will use Roboflow API only (no YOLO validation) ===")
 
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon"""
+    return send_from_directory(os.path.join(app.root_path, 'static', 'images'),
+                              'logo.png', mimetype='image/png')
+
 @app.route('/')
 def index():
     return redirect(url_for('login'))
